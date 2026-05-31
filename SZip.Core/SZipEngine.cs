@@ -32,7 +32,8 @@ namespace SZip.Core
         public bool LongDistanceMatching { get; set; }
         /// <summary>
         /// zstd windowLog (history window = 2^windowLog bytes). 0 = library default.
-        /// Capped at 27 so the default decompressor accepts it without windowLogMax tuning.
+        /// Up to 27 is accepted by any decompressor unchanged; 28..31 requires the decompressor
+        /// to raise windowLogMax, which SZip does automatically via the footer's WindowLog.
         /// </summary>
         public int WindowLog { get; set; }
         /// <summary>Append a content checksum to the zstd frame (in addition to our CRC32).</summary>
@@ -50,7 +51,10 @@ namespace SZip.Core
         /// <summary>Extra command-line args passed to precomp during precompression (e.g. "-intense").</summary>
         public string? PrecompExtraArgs { get; set; }
 
+        /// <summary>Max windowLog accepted by any zstd decompressor without raising windowLogMax.</summary>
         public const int MaxSafeWindowLog = 27;
+        /// <summary>Absolute max windowLog (2^31 = 2 GiB window) for long-distance mode.</summary>
+        public const int MaxLongWindowLog = 31;
 
         public bool IsEncrypted => !string.IsNullOrEmpty(Password);
 
@@ -78,7 +82,7 @@ namespace SZip.Core
         }
 
         internal int ResolvedWorkers => Workers < 0 ? Environment.ProcessorCount : Workers;
-        internal int ResolvedWindowLog => WindowLog <= 0 ? 0 : Math.Min(WindowLog, MaxSafeWindowLog);
+        internal int ResolvedWindowLog => WindowLog <= 0 ? 0 : Math.Min(WindowLog, MaxLongWindowLog);
     }
 
     /// <summary>
@@ -213,8 +217,10 @@ namespace SZip.Core
         /// <param name="method">Codec used at pack time.</param>
         /// <param name="password">Required when the payload was encrypted; otherwise null.</param>
         /// <param name="precompressed">When true, the decompressed payload is a precomp container.</param>
+        /// <param name="windowLog">Footer windowLog; lets the zstd decompressor accept large windows (&gt;27).</param>
         public static void Unpack(Stream compressedSource, string destinationDir, CompressionMethod method,
-            string? password = null, bool precompressed = false, IProgress<long>? progress = null)
+            string? password = null, bool precompressed = false, IProgress<long>? progress = null,
+            int windowLog = 0)
         {
             Directory.CreateDirectory(destinationDir);
 
@@ -223,7 +229,7 @@ namespace SZip.Core
                 : compressedSource;
             try
             {
-                using Stream codec = Codec.WrapDecompress(decLayer, method);
+                using Stream codec = Codec.WrapDecompress(decLayer, method, windowLog);
                 using var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true);
 
                 if (precompressed)

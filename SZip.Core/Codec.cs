@@ -45,12 +45,19 @@ namespace SZip.Core
         /// Returns a stream that decompresses bytes pulled from <paramref name="source"/> using
         /// <paramref name="method"/>. Leaves <paramref name="source"/> open on dispose.
         /// </summary>
-        public static Stream WrapDecompress(Stream source, CompressionMethod method)
+        /// <param name="windowLog">
+        /// The windowLog recorded in the footer. When &gt; 27 the zstd decompressor must raise its
+        /// windowLogMax to accept the large-window frame; 0 or &lt;=27 needs no tuning.
+        /// </param>
+        public static Stream WrapDecompress(Stream source, CompressionMethod method, int windowLog = 0)
         {
             switch (method)
             {
                 case CompressionMethod.Zstd:
                     var dec = new Decompressor();
+                    if (windowLog > CompressionOptions.MaxSafeWindowLog)
+                        dec.SetParameter(ZSTD_dParameter.ZSTD_d_windowLogMax,
+                            Math.Min(windowLog, CompressionOptions.MaxLongWindowLog));
                     return new DecompressionStream(source, dec, bufferSize: 0,
                         checkEndOfStream: false, preserveDecompressor: false, leaveOpen: true);
 

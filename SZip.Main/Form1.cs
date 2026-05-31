@@ -19,6 +19,7 @@ namespace SZip.Main
         private TextBox txtPassword;
         private CheckBox chkWrapZip;
         private CheckBox chkPrecomp;
+        private CheckBox chkLong;
         private Button btnEstimate;
         private Button btnCompress;
         private ProgressBar progressBar;
@@ -110,6 +111,10 @@ namespace SZip.Main
                 Enabled = precompOk,
             };
             this.Controls.Add(chkPrecomp);
+
+            // Long-distance mode (zstd large window).
+            chkLong = new CheckBox() { Text = "Nén tầm xa (cửa sổ 2GB, file rất lớn)", Location = new Point(300, 270), AutoSize = true };
+            this.Controls.Add(chkLong);
 
             // Estimate button
             btnEstimate = new Button() { Text = "Kiểm tra nhanh tỉ lệ nén", Location = new Point(20, 275), Size = new Size(250, 30) };
@@ -213,6 +218,7 @@ namespace SZip.Main
             string? password = string.IsNullOrEmpty(txtPassword.Text) ? null : txtPassword.Text;
             bool wrapZip = chkWrapZip.Checked;
             bool usePrecomp = chkPrecomp.Checked;
+            bool longMode = chkLong.Checked;
             lblStatus.Text = $"Đang nén [{method} / {profile}{(usePrecomp ? " / precomp" : "")}]. Vui lòng đợi...";
 
             var progress = new Progress<long>(done =>
@@ -225,6 +231,12 @@ namespace SZip.Main
                 var options = SZip.Core.CompressionOptions.FromProfile(profile, method);
                 options.Password = password;
                 options.UsePrecomp = usePrecomp;
+                if (longMode)
+                {
+                    options.LongDistanceMatching = true;
+                    if (options.WindowLog < SZip.Core.CompressionOptions.MaxLongWindowLog)
+                        options.WindowLog = SZip.Core.CompressionOptions.MaxLongWindowLog;
+                }
 
                 // UI gọi Service và không chứa Logic TarFile hay Process Start
                 var result = await Task.Run(() =>

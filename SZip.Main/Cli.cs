@@ -33,6 +33,7 @@ internal static class Cli
         bool usePrecomp = false;
         string? precompPath = null;
         string? precompArgs = null;
+        bool longMode = false;
         int level = 0;
         int windowLog = 0;
         int workers = -2; // -2 = unset
@@ -66,6 +67,9 @@ internal static class Cli
                     break;
                 case "--precomp-args":
                     precompArgs = NextArg(args, ref i, a);
+                    break;
+                case "--long":
+                    longMode = true;
                     break;
                 case "--fast":
                     profile = CompressionProfile.Fast;
@@ -104,6 +108,13 @@ internal static class Cli
         if (level > 0) options.Level = level;
         if (windowLog > 0) options.WindowLog = windowLog;
         if (workers != -2) options.Workers = workers;
+        if (longMode)
+        {
+            // Long-distance mode: 2 GiB window + LDM for maximum dedup on huge inputs.
+            options.LongDistanceMatching = true;
+            if (options.WindowLog < CompressionOptions.MaxLongWindowLog)
+                options.WindowLog = CompressionOptions.MaxLongWindowLog;
+        }
 
         if (usePrecomp)
         {
@@ -195,7 +206,7 @@ internal static class Cli
         using (var payload = SfxComposer.OpenPayload(source, footer))
         {
             SZipEngine.Unpack(payload, dest, footer.Method,
-                footer.IsEncrypted ? password : null, footer.IsPrecompressed, progress);
+                footer.IsEncrypted ? password : null, footer.IsPrecompressed, progress, footer.WindowLog);
         }
         progress.Done();
 
@@ -255,7 +266,8 @@ Thuật toán (-m):
 Tham số:
   --ultra/--normal/--fast   mức nỗ lực nén
   --level N                 ghi đè mức nén (zstd 1..22)
-  --window N                windowLog (tối đa 27)
+  --window N                windowLog (tối đa 31)
+  --long                    nén tầm xa: cửa sổ 2GB + LDM (file rất lớn, zstd)
   --threads N               số luồng (0 = đơn luồng)
   --split SZ                cắt mảnh: 2GB, 4GB, 700MB...
   -p, --password            mã hóa AES-256
