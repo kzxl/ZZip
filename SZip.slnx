@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="SZip.Core/SZip.Core.csproj" />
-  <Project Path="SZip.Main/SZip.Main.csproj" />
-  <Project Path="SZip.Stub/SZip.Stub.csproj" />
-  <Project Path="SZip.StubConsole/SZip.StubConsole.csproj" />
-  <Project Path="SZip.Tests/SZip.Tests.csproj" />
-</Solution>

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Ztar.Core/Ztar.Core.csproj" />
+  <Project Path="Ztar.Main/Ztar.Main.csproj" />
+  <Project Path="Ztar.Stub/Ztar.Stub.csproj" />
+  <Project Path="Ztar.StubConsole/Ztar.StubConsole.csproj" />
+  <Project Path="Ztar.Tests/Ztar.Tests.csproj" />
+</Solution>

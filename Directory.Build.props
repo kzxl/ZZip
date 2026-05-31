@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Shared metadata and version for all Ztar projects. MSBuild auto-imports the nearest
+    Directory.Build.props walking up from each project, so every csproj inherits these.
+  -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+
+    <Product>Ztar</Product>
+    <Company>Ztar</Company>
+    <Authors>Ztar</Authors>
+    <Copyright>Copyright (c) 2026</Copyright>
+    <Description>Ztar - studio siêu nén và tạo file tự giải nén (SFX) gọn nhẹ.</Description>
+
+    <!-- Embed the build configuration into the informational version for diagnostics. -->
+    <NeutralLanguage>vi-VN</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>
