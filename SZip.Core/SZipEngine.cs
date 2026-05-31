@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
 using System.Threading;
@@ -256,28 +257,40 @@ namespace SZip.Core
         {
             string work = Path.Combine(Path.GetTempPath(), "szip_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(work);
-            string exePath = Path.Combine(work, OperatingSystem.IsWindows() ? "precomp.exe" : "precomp");
-            string pcfPath = Path.Combine(work, "data.pcf");
             string tarPath = Path.Combine(work, "data.tar");
             try
             {
-                byte[] lenBuf = ReadExactly(containerStream, 8);
-                long exeLen = BitConverter.ToInt64(lenBuf, 0);
-
-                // Extract the embedded precomp.exe.
-                using (var exeFs = new FileStream(exePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    CopyExact(containerStream, exeFs, exeLen);
-                // The remainder is the .pcf container.
-                using (var pcfFs = new FileStream(pcfPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    containerStream.CopyTo(pcfFs, CopyBufferSize);
-
-                PrecompService.Restore(exePath, pcfPath, tarPath);
+                RestorePrecompToTar(containerStream, tarPath);
                 TarFile.ExtractToDirectory(tarPath, destinationDir, overwriteFiles: true);
             }
             finally
             {
                 TryDeleteDir(work);
             }
+        }
+
+        /// <summary>
+        /// Reads a precomp container <c>[8: exe length][precomp.exe][.pcf]</c> from
+        /// <paramref name="containerStream"/> and restores the original TAR to <paramref name="tarPath"/>
+        /// using the embedded precomp executable.
+        /// </summary>
+        private static void RestorePrecompToTar(Stream containerStream, string tarPath)
+        {
+            string work = Path.GetDirectoryName(tarPath)!;
+            string exePath = Path.Combine(work, OperatingSystem.IsWindows() ? "precomp.exe" : "precomp");
+            string pcfPath = Path.Combine(work, "data.pcf");
+
+            byte[] lenBuf = ReadExactly(containerStream, 8);
+            long exeLen = BitConverter.ToInt64(lenBuf, 0);
+
+            // Extract the embedded precomp.exe.
+            using (var exeFs = new FileStream(exePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                CopyExact(containerStream, exeFs, exeLen);
+            // The remainder is the .pcf container.
+            using (var pcfFs = new FileStream(pcfPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                containerStream.CopyTo(pcfFs, CopyBufferSize);
+
+            PrecompService.Restore(exePath, pcfPath, tarPath);
         }
 
         private static void CopyExact(Stream src, Stream dst, long count)
@@ -323,6 +336,101 @@ namespace SZip.Core
                 crc.Append(buffer.AsSpan(0, read));
             return crc.Value == expectedCrc;
         }
+
+        /// <summary>
+        /// Enumerates the entries inside an archive without extracting to disk. For plain archives
+        /// this streams the TAR directory; precompressed archives are restored to a temp file first
+        /// (precomp output cannot be parsed incrementally).
+        /// </summary>
+        public static IReadOnlyList<ArchiveEntry> ListEntries(Stream compressedSource, CompressionMethod method,
+            string? password = null, bool precompressed = false, int windowLog = 0,
+            CancellationToken cancel = default)
+        {
+            Stream decLayer = password != null
+                ? PayloadCrypto.CreateDecryptor(compressedSource, password)
+                : compressedSource;
+            try
+            {
+                using Stream codec = Codec.WrapDecompress(decLayer, method, windowLog);
+                using var meter = new ObservableStream(codec, computeCrc: false, leaveOpen: true, cancel: cancel);
+
+                if (precompressed)
+                {
+                    string work = Path.Combine(Path.GetTempPath(), "szip_" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(work);
+                    string tarPath = Path.Combine(work, "data.tar");
+                    try
+                    {
+                        RestorePrecompToTar(meter, tarPath);
+                        using var tarFs = new FileStream(tarPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        return ReadTarEntries(tarFs);
+                    }
+                    finally { TryDeleteDir(work); }
+                }
+
+                return ReadTarEntries(meter);
+            }
+            finally
+            {
+                if (password != null) decLayer.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Tests archive integrity by fully decompressing (and, if encrypted, authenticating) the
+        /// payload to a discard sink. Returns true when everything decodes cleanly. Combine with
+        /// <see cref="VerifyCrc"/> for a complete check.
+        /// </summary>
+        public static bool TestArchive(Stream compressedSource, CompressionMethod method,
+            string? password = null, bool precompressed = false, int windowLog = 0,
+            IProgress<long>? progress = null, CancellationToken cancel = default)
+        {
+            Stream decLayer = password != null
+                ? PayloadCrypto.CreateDecryptor(compressedSource, password)
+                : compressedSource;
+            try
+            {
+                using Stream codec = Codec.WrapDecompress(decLayer, method, windowLog);
+                using var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true, cancel: cancel);
+
+                if (precompressed)
+                {
+                    string work = Path.Combine(Path.GetTempPath(), "szip_" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(work);
+                    string tarPath = Path.Combine(work, "data.tar");
+                    try
+                    {
+                        RestorePrecompToTar(meter, tarPath);
+                        // Walk the restored TAR to confirm it parses.
+                        using var tarFs = new FileStream(tarPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        ReadTarEntries(tarFs);
+                    }
+                    finally { TryDeleteDir(work); }
+                }
+                else
+                {
+                    meter.CopyTo(Stream.Null, CopyBufferSize);
+                }
+                return true;
+            }
+            finally
+            {
+                if (password != null) decLayer.Dispose();
+            }
+        }
+
+        private static List<ArchiveEntry> ReadTarEntries(Stream tarStream)
+        {
+            var entries = new List<ArchiveEntry>();
+            using var reader = new TarReader(tarStream, leaveOpen: true);
+            TarEntry? entry;
+            while ((entry = reader.GetNextEntry()) != null)
+            {
+                bool isDir = entry.EntryType is TarEntryType.Directory;
+                entries.Add(new ArchiveEntry(entry.Name, isDir ? -1 : entry.Length, isDir));
+            }
+            return entries;
+        }
     }
 
     /// <summary>Outcome of a <see cref="SZipEngine.Pack"/> call.</summary>
@@ -338,4 +446,10 @@ namespace SZip.Core
 
         public double Ratio => OriginalSize > 0 ? (double)CompressedSize / OriginalSize : 0;
     }
+
+    /// <summary>One file or directory entry inside an archive, as reported by <see cref="SZipEngine.ListEntries"/>.</summary>
+    /// <param name="Name">Path of the entry within the archive.</param>
+    /// <param name="Size">Uncompressed size in bytes; -1 for directories.</param>
+    /// <param name="IsDirectory">True when the entry is a directory.</param>
+    public readonly record struct ArchiveEntry(string Name, long Size, bool IsDirectory);
 }

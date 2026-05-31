@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using SZip.Core;
 using SZip.Main.Services;
@@ -30,6 +31,8 @@ internal static class Cli
                 "c" or "compress" or "-c" => RunCompress(args),
                 "x" or "extract" or "-x" => RunExtract(args),
                 "i" or "info" or "-i" => RunInfo(args),
+                "l" or "list" or "-l" => RunList(args),
+                "t" or "test" or "-t" => RunTest(args),
                 "e" or "estimate" or "--estimate" => RunEstimate(args),
                 "h" or "help" or "-h" or "--help" or "/?" => PrintHelp(),
                 _ => Fail($"Lệnh không hợp lệ: {verb}"),
@@ -257,6 +260,103 @@ internal static class Cli
         return 0;
     }
 
+    private static int RunList(string[] args)
+    {
+        string? source = null;
+        string? password = null;
+        for (int i = 1; i < args.Length; i++)
+        {
+            string a = args[i];
+            switch (a.ToLowerInvariant())
+            {
+                case "-p" or "--password": password = NextArg(args, ref i, a); break;
+                default:
+                    if (a.StartsWith('-')) return Fail($"Tham số không rõ: {a}");
+                    source ??= a;
+                    break;
+            }
+        }
+        if (source == null) return Fail("Thiếu đường dẫn tệp SFX.");
+
+        var footer = SfxComposer.ReadFooter(source);
+        if (footer == null) return Fail("Tệp không phải SFX SZip hợp lệ.");
+        if (footer.IsEncrypted && string.IsNullOrEmpty(password))
+            return Fail("Gói được mã hóa. Dùng -p <mật_khẩu>.");
+
+        IReadOnlyList<ArchiveEntry> entries;
+        using (var payload = SfxComposer.OpenPayload(source, footer))
+        {
+            entries = SZipEngine.ListEntries(payload, footer.Method,
+                footer.IsEncrypted ? password : null, footer.IsPrecompressed, footer.WindowLog, Cts.Token);
+        }
+
+        Console.WriteLine($"Nội dung \"{source}\" ({entries.Count} mục):");
+        long totalBytes = 0;
+        int fileCount = 0;
+        foreach (var e in entries)
+        {
+            if (e.IsDirectory)
+            {
+                Console.WriteLine($"  <DIR>            {e.Name}");
+            }
+            else
+            {
+                Console.WriteLine($"  {FormatSize(e.Size),12}  {e.Name}");
+                totalBytes += e.Size;
+                fileCount++;
+            }
+        }
+        Console.WriteLine($"---  {fileCount} tệp, tổng {FormatSize(totalBytes)} (chưa nén).");
+        return 0;
+    }
+
+    private static int RunTest(string[] args)
+    {
+        string? source = null;
+        string? password = null;
+        for (int i = 1; i < args.Length; i++)
+        {
+            string a = args[i];
+            switch (a.ToLowerInvariant())
+            {
+                case "-p" or "--password": password = NextArg(args, ref i, a); break;
+                default:
+                    if (a.StartsWith('-')) return Fail($"Tham số không rõ: {a}");
+                    source ??= a;
+                    break;
+            }
+        }
+        if (source == null) return Fail("Thiếu đường dẫn tệp SFX.");
+
+        var footer = SfxComposer.ReadFooter(source);
+        if (footer == null) return Fail("Tệp không phải SFX SZip hợp lệ.");
+        if (footer.IsEncrypted && string.IsNullOrEmpty(password))
+            return Fail("Gói được mã hóa. Dùng -p <mật_khẩu>.");
+
+        Console.WriteLine($"SZip: kiểm tra toàn vẹn \"{source}\" [{footer.Method}]"
+            + (footer.IsEncrypted ? " (mã hóa)" : ""));
+
+        // 1) CRC32 over the on-disk payload.
+        using (var payload = SfxComposer.OpenPayload(source, footer))
+        {
+            if (!SZipEngine.VerifyCrc(payload, footer.Crc32))
+                return Fail("CRC32 không khớp - dữ liệu hỏng.");
+        }
+        Console.WriteLine("  CRC32: OK");
+
+        // 2) Full decompression (and authentication, if encrypted) to a discard sink.
+        var progress = new ConsoleProgress(footer.OriginalSize);
+        using (var payload = SfxComposer.OpenPayload(source, footer))
+        {
+            SZipEngine.TestArchive(payload, footer.Method,
+                footer.IsEncrypted ? password : null, footer.IsPrecompressed, footer.WindowLog, progress, Cts.Token);
+        }
+        progress.Done();
+        Console.WriteLine("  Giải nén thử: OK");
+        Console.WriteLine("Tệp toàn vẹn.");
+        return 0;
+    }
+
     private static int PrintHelp()
     {
         Console.WriteLine("""
@@ -268,6 +368,8 @@ Cách dùng:
                  [--threads N] [--split KÍCH_THƯỚC] [-p mật_khẩu] [--zip]
   SZip x <sfx.exe> [-o thư_mục] [-p mật_khẩu]
   SZip i <sfx.exe>
+  SZip l <sfx.exe> [-p mật_khẩu]   (liệt kê nội dung, không giải nén)
+  SZip t <sfx.exe> [-p mật_khẩu]   (kiểm tra toàn vẹn, không ghi đĩa)
   SZip e <nguồn>                 (ước tính nhanh tỉ lệ nén)
   SZip h
 
@@ -275,6 +377,8 @@ Ví dụ:
   SZip c "C:\Data" -o Data.exe --ultra
   SZip c game.iso -m lzma --level 22 --split 2GB
   SZip c secret\ -o s.exe -p "MatKhau123" --zip
+  SZip l Data.exe
+  SZip t Data.exe
   SZip e "C:\Data"
   SZip x Data.exe -o C:\Out
 
