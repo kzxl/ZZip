@@ -1,0 +1,331 @@
+using System;
+using System.Formats.Tar;
+using System.IO;
+using SZip.Core.Streams;
+
+namespace SZip.Core
+{
+    /// <summary>Preset compression profiles surfaced to the UI / CLI.</summary>
+    public enum CompressionProfile
+    {
+        /// <summary>Fast, low effort. zstd level 3.</summary>
+        Fast,
+        /// <summary>Balanced. zstd level 12, checksum on.</summary>
+        Normal,
+        /// <summary>Maximum ratio. zstd level 22 + long-distance matching + multi-threading.</summary>
+        Ultra,
+    }
+
+    /// <summary>
+    /// Tunable compression options. <see cref="FromProfile"/> builds sensible defaults
+    /// but every field can be overridden (e.g. by the CLI).
+    /// </summary>
+    public sealed class CompressionOptions
+    {
+        /// <summary>Codec applied to the payload.</summary>
+        public CompressionMethod Method { get; set; } = CompressionMethod.Zstd;
+        /// <summary>zstd level, 1..22.</summary>
+        public int Level { get; set; } = 19;
+        /// <summary>Worker thread count. 0 = single-threaded. -1 = auto (Environment.ProcessorCount).</summary>
+        public int Workers { get; set; }
+        /// <summary>Enable long-distance matching (great for large/redundant data).</summary>
+        public bool LongDistanceMatching { get; set; }
+        /// <summary>
+        /// zstd windowLog (history window = 2^windowLog bytes). 0 = library default.
+        /// Capped at 27 so the default decompressor accepts it without windowLogMax tuning.
+        /// </summary>
+        public int WindowLog { get; set; }
+        /// <summary>Append a content checksum to the zstd frame (in addition to our CRC32).</summary>
+        public bool ContentChecksum { get; set; } = true;
+        /// <summary>Optional password. When set, the payload is AES-256 encrypted.</summary>
+        public string? Password { get; set; }
+        /// <summary>
+        /// When true, precompress the TAR via an external precomp tool before codec compression.
+        /// Requires <see cref="PrecompService.IsAvailable"/>. Greatly improves ratio on data that
+        /// contains already-compressed streams (games, installers, office docs).
+        /// </summary>
+        public bool UsePrecomp { get; set; }
+        /// <summary>Explicit path to precomp.exe; null = auto-detect.</summary>
+        public string? PrecompPath { get; set; }
+        /// <summary>Extra command-line args passed to precomp during precompression (e.g. "-intense").</summary>
+        public string? PrecompExtraArgs { get; set; }
+
+        public const int MaxSafeWindowLog = 27;
+
+        public bool IsEncrypted => !string.IsNullOrEmpty(Password);
+
+        public static CompressionOptions FromProfile(CompressionProfile profile,
+            CompressionMethod method = CompressionMethod.Zstd)
+        {
+            var o = profile switch
+            {
+                CompressionProfile.Fast => new CompressionOptions
+                {
+                    Level = 3, Workers = 0, LongDistanceMatching = false, WindowLog = 0,
+                },
+                CompressionProfile.Normal => new CompressionOptions
+                {
+                    Level = 12, Workers = -1, LongDistanceMatching = false, WindowLog = 0,
+                },
+                CompressionProfile.Ultra => new CompressionOptions
+                {
+                    Level = 22, Workers = -1, LongDistanceMatching = true, WindowLog = MaxSafeWindowLog,
+                },
+                _ => new CompressionOptions(),
+            };
+            o.Method = method;
+            return o;
+        }
+
+        internal int ResolvedWorkers => Workers < 0 ? Environment.ProcessorCount : Workers;
+        internal int ResolvedWindowLog => WindowLog <= 0 ? 0 : Math.Min(WindowLog, MaxSafeWindowLog);
+    }
+
+    /// <summary>
+    /// Core archive engine. Packs a file or directory into a TAR stream, compresses it
+    /// with zstd, and streams the result to any destination stream. Decompression is the
+    /// reverse. No intermediate temp files are used.
+    /// </summary>
+    public static class SZipEngine
+    {
+        private const int CopyBufferSize = 1 << 20; // 1 MiB
+
+        /// <summary>
+        /// Streams <paramref name="sourcePath"/> (file or directory) as TAR + zstd into
+        /// <paramref name="destination"/>. Returns stats describing the written payload.
+        /// </summary>
+        /// <param name="destination">Where compressed bytes go. Not closed by this method.</param>
+        /// <param name="progress">Reports uncompressed bytes processed so far.</param>
+        public static PackResult Pack(string sourcePath, Stream destination, CompressionOptions options,
+            IProgress<long>? progress = null)
+        {
+            ArgumentNullException.ThrowIfNull(destination);
+            ArgumentNullException.ThrowIfNull(options);
+
+            bool isDir = Directory.Exists(sourcePath);
+            bool isFile = File.Exists(sourcePath);
+            if (!isDir && !isFile)
+                throw new FileNotFoundException("Source path not found.", sourcePath);
+
+            bool precomp = options.UsePrecomp;
+            string? precompExe = precomp ? PrecompService.Locate(options.PrecompPath) : null;
+            if (precomp && precompExe == null)
+                throw new FileNotFoundException("Bật nén sâu nhưng không tìm thấy precomp.exe.");
+
+            // The pipeline: [plaintext producer] -> codec -> (optional AES) -> CRC counter -> destination.
+            var crcCounter = new ObservableStream(destination, computeCrc: true, leaveOpen: true);
+            Stream encLayer = options.IsEncrypted
+                ? PayloadCrypto.CreateEncryptor(crcCounter, options.Password!)
+                : crcCounter;
+            Stream codec = Codec.WrapCompress(encLayer, options);
+
+            long plaintextSize;
+            try
+            {
+                var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true);
+                if (precomp)
+                    plaintextSize = ProducePrecompContainer(sourcePath, isDir, precompExe!, options, meter);
+                else
+                    plaintextSize = ProduceTar(sourcePath, isDir, meter);
+                meter.Flush();
+            }
+            finally
+            {
+                codec.Dispose();
+                if (!ReferenceEquals(encLayer, crcCounter)) encLayer.Dispose();
+                crcCounter.Flush();
+            }
+
+            return new PackResult
+            {
+                CompressedSize = crcCounter.BytesObserved,
+                OriginalSize = plaintextSize,
+                Crc32 = crcCounter.Crc,
+                WindowLog = (byte)options.ResolvedWindowLog,
+                Method = options.Method,
+                Encrypted = options.IsEncrypted,
+                Precompressed = precomp,
+            };
+        }
+
+        /// <summary>Writes the source as a TAR stream into <paramref name="dest"/>; returns bytes written.</summary>
+        private static long ProduceTar(string sourcePath, bool isDir, ObservableStream dest)
+        {
+            if (isDir)
+            {
+                TarFile.CreateFromDirectory(sourcePath, dest, includeBaseDirectory: true);
+            }
+            else
+            {
+                using var tar = new TarWriter(dest, leaveOpen: true);
+                tar.WriteEntry(sourcePath, Path.GetFileName(sourcePath));
+            }
+            return dest.BytesObserved;
+        }
+
+        /// <summary>
+        /// Builds a self-contained precomp container and writes it into <paramref name="dest"/>:
+        /// <c>[8: precomp.exe length][precomp.exe][.pcf]</c>. Embedding precomp.exe lets the SFX
+        /// restore on any machine without it installed. The TAR is precompressed via precomp -cn.
+        /// Returns the container size (plaintext fed to the codec).
+        /// </summary>
+        private static long ProducePrecompContainer(string sourcePath, bool isDir, string precompExe,
+            CompressionOptions options, ObservableStream dest)
+        {
+            string work = Path.Combine(Path.GetTempPath(), "szip_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(work);
+            string tarPath = Path.Combine(work, "data.tar");
+            string pcfPath = Path.Combine(work, "data.pcf");
+            try
+            {
+                // 1) TAR the source to a temp file (precomp needs a real file, can't stream).
+                using (var tarFs = new FileStream(tarPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var tarMeter = new ObservableStream(tarFs, computeCrc: false, leaveOpen: true))
+                {
+                    ProduceTar(sourcePath, isDir, tarMeter);
+                    tarMeter.Flush();
+                }
+
+                // 2) precomp the TAR (no internal compression; our codec does the squeezing).
+                PrecompService.Precompress(precompExe, tarPath, pcfPath, options.PrecompExtraArgs);
+
+                // 3) Emit container: [exe length][exe bytes][pcf bytes] into the codec pipeline.
+                byte[] exeLenBuf = BitConverter.GetBytes((long)new FileInfo(precompExe).Length);
+                dest.Write(exeLenBuf, 0, exeLenBuf.Length);
+                using (var exeFs = new FileStream(precompExe, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    exeFs.CopyTo(dest, CopyBufferSize);
+                using (var pcfFs = new FileStream(pcfPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    pcfFs.CopyTo(dest, CopyBufferSize);
+
+                return dest.BytesObserved;
+            }
+            finally
+            {
+                TryDeleteDir(work);
+            }
+        }
+
+        /// <summary>
+        /// Decompresses a payload stream and extracts the embedded TAR into
+        /// <paramref name="destinationDir"/>. <paramref name="compressedSource"/> should yield
+        /// exactly the on-disk payload bytes (e.g. a <see cref="SubStream"/>).
+        /// </summary>
+        /// <param name="method">Codec used at pack time.</param>
+        /// <param name="password">Required when the payload was encrypted; otherwise null.</param>
+        /// <param name="precompressed">When true, the decompressed payload is a precomp container.</param>
+        public static void Unpack(Stream compressedSource, string destinationDir, CompressionMethod method,
+            string? password = null, bool precompressed = false, IProgress<long>? progress = null)
+        {
+            Directory.CreateDirectory(destinationDir);
+
+            Stream decLayer = password != null
+                ? PayloadCrypto.CreateDecryptor(compressedSource, password)
+                : compressedSource;
+            try
+            {
+                using Stream codec = Codec.WrapDecompress(decLayer, method);
+                using var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true);
+
+                if (precompressed)
+                    RestorePrecompContainer(meter, destinationDir);
+                else
+                    TarFile.ExtractToDirectory(meter, destinationDir, overwriteFiles: true);
+            }
+            finally
+            {
+                if (password != null) decLayer.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Reads a precomp container <c>[8: exe length][precomp.exe][.pcf]</c> from
+        /// <paramref name="containerStream"/>, restores the original TAR with the embedded precomp,
+        /// and extracts it into <paramref name="destinationDir"/>.
+        /// </summary>
+        private static void RestorePrecompContainer(Stream containerStream, string destinationDir)
+        {
+            string work = Path.Combine(Path.GetTempPath(), "szip_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(work);
+            string exePath = Path.Combine(work, OperatingSystem.IsWindows() ? "precomp.exe" : "precomp");
+            string pcfPath = Path.Combine(work, "data.pcf");
+            string tarPath = Path.Combine(work, "data.tar");
+            try
+            {
+                byte[] lenBuf = ReadExactly(containerStream, 8);
+                long exeLen = BitConverter.ToInt64(lenBuf, 0);
+
+                // Extract the embedded precomp.exe.
+                using (var exeFs = new FileStream(exePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    CopyExact(containerStream, exeFs, exeLen);
+                // The remainder is the .pcf container.
+                using (var pcfFs = new FileStream(pcfPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    containerStream.CopyTo(pcfFs, CopyBufferSize);
+
+                PrecompService.Restore(exePath, pcfPath, tarPath);
+                TarFile.ExtractToDirectory(tarPath, destinationDir, overwriteFiles: true);
+            }
+            finally
+            {
+                TryDeleteDir(work);
+            }
+        }
+
+        private static void CopyExact(Stream src, Stream dst, long count)
+        {
+            byte[] buf = new byte[CopyBufferSize];
+            long remaining = count;
+            while (remaining > 0)
+            {
+                int want = (int)Math.Min(buf.Length, remaining);
+                int n = src.Read(buf, 0, want);
+                if (n == 0) throw new EndOfStreamException("Container precomp bị cắt cụt.");
+                dst.Write(buf, 0, n);
+                remaining -= n;
+            }
+        }
+
+        private static byte[] ReadExactly(Stream s, int count)
+        {
+            byte[] buf = new byte[count];
+            int read = 0;
+            while (read < count)
+            {
+                int n = s.Read(buf, read, count - read);
+                if (n == 0) throw new EndOfStreamException("Dữ liệu bị cắt cụt.");
+                read += n;
+            }
+            return buf;
+        }
+
+        private static void TryDeleteDir(string dir)
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); }
+            catch { /* best-effort temp cleanup */ }
+        }
+
+        /// <summary>Verifies that the bytes in <paramref name="payload"/> match the expected CRC32.</summary>
+        public static bool VerifyCrc(Stream payload, uint expectedCrc)
+        {
+            var crc = new Crc32();
+            byte[] buffer = new byte[CopyBufferSize];
+            int read;
+            while ((read = payload.Read(buffer, 0, buffer.Length)) > 0)
+                crc.Append(buffer.AsSpan(0, read));
+            return crc.Value == expectedCrc;
+        }
+    }
+
+    /// <summary>Outcome of a <see cref="SZipEngine.Pack"/> call.</summary>
+    public sealed class PackResult
+    {
+        public long CompressedSize { get; init; }
+        public long OriginalSize { get; init; }
+        public uint Crc32 { get; init; }
+        public byte WindowLog { get; init; }
+        public CompressionMethod Method { get; init; }
+        public bool Encrypted { get; init; }
+        public bool Precompressed { get; init; }
+
+        public double Ratio => OriginalSize > 0 ? (double)CompressedSize / OriginalSize : 0;
+    }
+}
