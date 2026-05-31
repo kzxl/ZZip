@@ -10,6 +10,7 @@
     <!-- Cross-platform self-extracting stub: framework-dependent single file. -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
+    <ApplicationIcon>..\assets\SZip.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

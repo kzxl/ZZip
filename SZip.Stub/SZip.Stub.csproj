@@ -12,6 +12,7 @@
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <AssemblyName>SZip.Stub</AssemblyName>
+    <ApplicationIcon>..\assets\SZip.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

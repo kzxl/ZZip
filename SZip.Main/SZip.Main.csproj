@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SZip</AssemblyName>
+    <ApplicationIcon>..\assets\SZip.ico</ApplicationIcon>
 
     <!-- Where the prebuilt stub gets published before being embedded. -->
     <StubPublishDir>$(IntermediateOutputPath)stub\</StubPublishDir>

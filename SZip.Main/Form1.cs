@@ -38,6 +38,7 @@ namespace SZip.Main
         private void InitializeComponent()
         {
             this.Text = "SZip - Studio Siêu Nén (SFX Maker UA)";
+            TrySetWindowIcon();
             this.Size = new Size(560, 470);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -286,6 +287,21 @@ namespace SZip.Main
                 progressBar.Style = ProgressBarStyle.Continuous;
                 progressBar.Value = 100;
             }
+        }
+
+        private void TrySetWindowIcon()
+        {
+            // The icon is embedded in the exe via <ApplicationIcon>; extract it for the titlebar.
+            try
+            {
+                string exe = Environment.ProcessPath ?? "";
+                if (File.Exists(exe))
+                {
+                    var ico = System.Drawing.Icon.ExtractAssociatedIcon(exe);
+                    if (ico != null) this.Icon = ico;
+                }
+            }
+            catch { /* icon is cosmetic; ignore failures */ }
         }
 
         private static string FormatSize(long bytes)

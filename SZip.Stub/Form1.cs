@@ -27,6 +27,16 @@ namespace SZip.Stub
         private void InitializeComponent()
         {
             this.Text = "SZip - Trình Giải Nén (Universal Extractor)";
+            try
+            {
+                string exe = Environment.ProcessPath ?? "";
+                if (File.Exists(exe))
+                {
+                    var ico = System.Drawing.Icon.ExtractAssociatedIcon(exe);
+                    if (ico != null) this.Icon = ico;
+                }
+            }
+            catch { /* icon is cosmetic */ }
             this.Size = new Size(500, 250);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
