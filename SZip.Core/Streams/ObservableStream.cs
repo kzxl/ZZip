@@ -1,12 +1,14 @@
 using System;
 using System.IO;
+using System.Threading;
 
 namespace SZip.Core.Streams
 {
     /// <summary>
     /// Pass-through stream that observes every byte written to (or read from) the
-    /// inner stream: it counts the total, optionally computes a CRC32, and reports
-    /// progress. Enables real progress bars and integrity checks without buffering.
+    /// inner stream: it counts the total, optionally computes a CRC32, reports
+    /// progress, and honors a cancellation token. Enables real progress bars,
+    /// integrity checks, and mid-stream cancellation without buffering.
     /// </summary>
     public sealed class ObservableStream : Stream
     {
@@ -14,6 +16,7 @@ namespace SZip.Core.Streams
         private readonly Crc32? _crc;
         private readonly IProgress<long>? _progress;
         private readonly bool _leaveOpen;
+        private readonly CancellationToken _cancel;
         private long _total;
         private long _lastReported;
         private readonly long _reportEvery;
@@ -21,14 +24,16 @@ namespace SZip.Core.Streams
         /// <param name="computeCrc">When true, a running CRC32 is maintained over the bytes.</param>
         /// <param name="progress">Receives cumulative byte counts, throttled by <paramref name="reportEvery"/>.</param>
         /// <param name="reportEvery">Minimum byte delta between progress callbacks.</param>
+        /// <param name="cancel">Checked on every chunk; throws OperationCanceledException when signalled.</param>
         public ObservableStream(Stream inner, bool computeCrc = false, IProgress<long>? progress = null,
-            long reportEvery = 1 << 20, bool leaveOpen = true)
+            long reportEvery = 1 << 20, bool leaveOpen = true, CancellationToken cancel = default)
         {
             _inner = inner;
             _crc = computeCrc ? new Crc32() : null;
             _progress = progress;
             _reportEvery = reportEvery <= 0 ? 1 : reportEvery;
             _leaveOpen = leaveOpen;
+            _cancel = cancel;
         }
 
         public long BytesObserved => _total;
@@ -36,12 +41,14 @@ namespace SZip.Core.Streams
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            _cancel.ThrowIfCancellationRequested();
             _inner.Write(buffer, offset, count);
             Observe(buffer.AsSpan(offset, count));
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            _cancel.ThrowIfCancellationRequested();
             int read = _inner.Read(buffer, offset, count);
             if (read > 0) Observe(buffer.AsSpan(offset, read));
             return read;

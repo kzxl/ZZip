@@ -1,6 +1,7 @@
 using System;
 using System.Formats.Tar;
 using System.IO;
+using System.Threading;
 using SZip.Core.Streams;
 
 namespace SZip.Core
@@ -100,8 +101,9 @@ namespace SZip.Core
         /// </summary>
         /// <param name="destination">Where compressed bytes go. Not closed by this method.</param>
         /// <param name="progress">Reports uncompressed bytes processed so far.</param>
+        /// <param name="cancel">Cancels the operation mid-stream.</param>
         public static PackResult Pack(string sourcePath, Stream destination, CompressionOptions options,
-            IProgress<long>? progress = null)
+            IProgress<long>? progress = null, CancellationToken cancel = default)
         {
             ArgumentNullException.ThrowIfNull(destination);
             ArgumentNullException.ThrowIfNull(options);
@@ -126,9 +128,9 @@ namespace SZip.Core
             long plaintextSize;
             try
             {
-                var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true);
+                var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true, cancel: cancel);
                 if (precomp)
-                    plaintextSize = ProducePrecompContainer(sourcePath, isDir, precompExe!, options, meter);
+                    plaintextSize = ProducePrecompContainer(sourcePath, isDir, precompExe!, options, meter, cancel);
                 else
                     plaintextSize = ProduceTar(sourcePath, isDir, meter);
                 meter.Flush();
@@ -174,7 +176,7 @@ namespace SZip.Core
         /// Returns the container size (plaintext fed to the codec).
         /// </summary>
         private static long ProducePrecompContainer(string sourcePath, bool isDir, string precompExe,
-            CompressionOptions options, ObservableStream dest)
+            CompressionOptions options, ObservableStream dest, CancellationToken cancel)
         {
             string work = Path.Combine(Path.GetTempPath(), "szip_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(work);
@@ -184,12 +186,13 @@ namespace SZip.Core
             {
                 // 1) TAR the source to a temp file (precomp needs a real file, can't stream).
                 using (var tarFs = new FileStream(tarPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                using (var tarMeter = new ObservableStream(tarFs, computeCrc: false, leaveOpen: true))
+                using (var tarMeter = new ObservableStream(tarFs, computeCrc: false, leaveOpen: true, cancel: cancel))
                 {
                     ProduceTar(sourcePath, isDir, tarMeter);
                     tarMeter.Flush();
                 }
 
+                cancel.ThrowIfCancellationRequested();
                 // 2) precomp the TAR (no internal compression; our codec does the squeezing).
                 PrecompService.Precompress(precompExe, tarPath, pcfPath, options.PrecompExtraArgs);
 
@@ -218,9 +221,10 @@ namespace SZip.Core
         /// <param name="password">Required when the payload was encrypted; otherwise null.</param>
         /// <param name="precompressed">When true, the decompressed payload is a precomp container.</param>
         /// <param name="windowLog">Footer windowLog; lets the zstd decompressor accept large windows (&gt;27).</param>
+        /// <param name="cancel">Cancels the operation mid-stream.</param>
         public static void Unpack(Stream compressedSource, string destinationDir, CompressionMethod method,
             string? password = null, bool precompressed = false, IProgress<long>? progress = null,
-            int windowLog = 0)
+            int windowLog = 0, CancellationToken cancel = default)
         {
             Directory.CreateDirectory(destinationDir);
 
@@ -230,7 +234,7 @@ namespace SZip.Core
             try
             {
                 using Stream codec = Codec.WrapDecompress(decLayer, method, windowLog);
-                using var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true);
+                using var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true, cancel: cancel);
 
                 if (precompressed)
                     RestorePrecompContainer(meter, destinationDir);

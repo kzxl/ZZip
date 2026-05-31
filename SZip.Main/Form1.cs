@@ -22,10 +22,12 @@ namespace SZip.Main
         private CheckBox chkLong;
         private Button btnEstimate;
         private Button btnCompress;
+        private Button btnCancel;
         private ProgressBar progressBar;
         private Label lblStatus;
 
         private readonly SfxBuilderService _sfxService;
+        private System.Threading.CancellationTokenSource? _cts;
 
         public Form1()
         {
@@ -130,6 +132,10 @@ namespace SZip.Main
             btnCompress = new Button() { Text = "Bắt đầu Siêu Nén", Location = new Point(330, 395), Size = new Size(200, 45), Font = new Font(this.Font, FontStyle.Bold) };
             btnCompress.Click += BtnCompress_Click;
             this.Controls.Add(btnCompress);
+
+            btnCancel = new Button() { Text = "Hủy", Location = new Point(230, 395), Size = new Size(90, 45), Enabled = false };
+            btnCancel.Click += (s, e) => { _cts?.Cancel(); btnCancel.Enabled = false; lblStatus.Text = "Đang hủy..."; };
+            this.Controls.Add(btnCancel);
         }
 
         private void BtnBrowseSource_Click(object sender, EventArgs e)
@@ -205,6 +211,8 @@ namespace SZip.Main
 
             btnCompress.Enabled = false;
             btnEstimate.Enabled = false;
+            btnCancel.Enabled = true;
+            _cts = new System.Threading.CancellationTokenSource();
             progressBar.Style = ProgressBarStyle.Marquee;
 
             string source = txtSource.Text;
@@ -239,8 +247,9 @@ namespace SZip.Main
                 }
 
                 // UI gọi Service và không chứa Logic TarFile hay Process Start
+                var token = _cts.Token;
                 var result = await Task.Run(() =>
-                    _sfxService.BuildSfx(source, dest, splitSize, options, progress));
+                    _sfxService.BuildSfx(source, dest, splitSize, options, progress, token), token);
 
                 string extra = "";
                 if (wrapZip)
@@ -256,6 +265,12 @@ namespace SZip.Main
                     + (password != null ? "\nĐã mã hóa AES-256." : "") + extra,
                     "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            catch (OperationCanceledException)
+            {
+                lblStatus.Text = "Đã hủy theo yêu cầu.";
+                // Clean up the partially written output so no corrupt SFX is left behind.
+                try { if (File.Exists(dest)) File.Delete(dest); } catch { }
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi: {ex.Message}");
@@ -265,6 +280,9 @@ namespace SZip.Main
             {
                 btnCompress.Enabled = true;
                 btnEstimate.Enabled = true;
+                btnCancel.Enabled = false;
+                _cts?.Dispose();
+                _cts = null;
                 progressBar.Style = ProgressBarStyle.Continuous;
                 progressBar.Value = 100;
             }

@@ -22,7 +22,8 @@ namespace SZip.Core
         /// <param name="sourcePath">File or directory to pack.</param>
         /// <param name="destExePath">Output .exe path.</param>
         public static PackResult BuildAppended(byte[] stubBytes, string sourcePath, string destExePath,
-            CompressionOptions options, IProgress<long>? progress = null)
+            CompressionOptions options, IProgress<long>? progress = null,
+            System.Threading.CancellationToken cancel = default)
         {
             ArgumentNullException.ThrowIfNull(stubBytes);
 
@@ -30,7 +31,7 @@ namespace SZip.Core
             output.Write(stubBytes, 0, stubBytes.Length);
             long payloadOffset = output.Position;
 
-            PackResult result = SZipEngine.Pack(sourcePath, output, options, progress);
+            PackResult result = SZipEngine.Pack(sourcePath, output, options, progress, cancel);
 
             var footer = new SZipFooter
             {
@@ -55,7 +56,8 @@ namespace SZip.Core
         /// <c>{destBaseName}.001</c>, <c>.002</c>, ... each up to <paramref name="splitSizeBytes"/>.
         /// </summary>
         public static PackResult BuildMultiPart(byte[] stubBytes, string sourcePath, string destExePath,
-            long splitSizeBytes, CompressionOptions options, IProgress<long>? progress = null)
+            long splitSizeBytes, CompressionOptions options, IProgress<long>? progress = null,
+            System.Threading.CancellationToken cancel = default)
         {
             ArgumentNullException.ThrowIfNull(stubBytes);
             if (splitSizeBytes <= 0) throw new ArgumentOutOfRangeException(nameof(splitSizeBytes));
@@ -68,7 +70,7 @@ namespace SZip.Core
             int partCount;
             using (var chunks = new ChunkedWriteStream(baseName, splitSizeBytes))
             {
-                result = SZipEngine.Pack(sourcePath, chunks, options, progress);
+                result = SZipEngine.Pack(sourcePath, chunks, options, progress, cancel);
                 chunks.Flush();
                 partCount = chunks.PartCount;
             }

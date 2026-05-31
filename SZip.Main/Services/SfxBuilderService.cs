@@ -21,14 +21,15 @@ namespace SZip.Main.Services
         /// </summary>
         /// <param name="splitSizeBytes">0 = embed payload in the exe; &gt;0 = split into external volumes.</param>
         public PackResult BuildSfx(string sourcePath, string destExePath, long splitSizeBytes,
-            CompressionOptions options, IProgress<long>? progress = null)
+            CompressionOptions options, IProgress<long>? progress = null,
+            System.Threading.CancellationToken cancel = default)
         {
             byte[] stub = LoadStubBytes();
 
             if (splitSizeBytes <= 0)
-                return SfxComposer.BuildAppended(stub, sourcePath, destExePath, options, progress);
+                return SfxComposer.BuildAppended(stub, sourcePath, destExePath, options, progress, cancel);
 
-            return SfxComposer.BuildMultiPart(stub, sourcePath, destExePath, splitSizeBytes, options, progress);
+            return SfxComposer.BuildMultiPart(stub, sourcePath, destExePath, splitSizeBytes, options, progress, cancel);
         }
 
         /// <summary>

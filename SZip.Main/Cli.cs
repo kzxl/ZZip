@@ -7,18 +7,39 @@ namespace SZip.Main;
 
 internal static class Cli
 {
+    /// <summary>Cancellation source wired to Ctrl-C; the first press requests a graceful stop.</summary>
+    private static readonly System.Threading.CancellationTokenSource Cts = new();
+
     public static int Run(string[] args)
     {
-        string verb = args[0].ToLowerInvariant();
-        return verb switch
+        Console.CancelKeyPress += (_, e) =>
         {
-            "c" or "compress" or "-c" => RunCompress(args),
-            "x" or "extract" or "-x" => RunExtract(args),
-            "i" or "info" or "-i" => RunInfo(args),
-            "e" or "estimate" or "--estimate" => RunEstimate(args),
-            "h" or "help" or "-h" or "--help" or "/?" => PrintHelp(),
-            _ => Fail($"Lệnh không hợp lệ: {verb}"),
+            if (!Cts.IsCancellationRequested)
+            {
+                e.Cancel = true; // don't kill the process; let the operation unwind cleanly
+                Cts.Cancel();
+                Console.Error.WriteLine("\nĐang hủy... (nhấn Ctrl-C lần nữa để buộc thoát)");
+            }
         };
+
+        string verb = args[0].ToLowerInvariant();
+        try
+        {
+            return verb switch
+            {
+                "c" or "compress" or "-c" => RunCompress(args),
+                "x" or "extract" or "-x" => RunExtract(args),
+                "i" or "info" or "-i" => RunInfo(args),
+                "e" or "estimate" or "--estimate" => RunEstimate(args),
+                "h" or "help" or "-h" or "--help" or "/?" => PrintHelp(),
+                _ => Fail($"Lệnh không hợp lệ: {verb}"),
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            Console.Error.WriteLine("Đã hủy theo yêu cầu.");
+            return 130; // conventional exit code for SIGINT
+        }
     }
 
     private static int RunCompress(string[] args)
@@ -133,7 +154,7 @@ internal static class Cli
 
         var builder = new SfxBuilderService();
         var progress = new ConsoleProgress();
-        PackResult result = builder.BuildSfx(source, output, splitSize, options, progress);
+        PackResult result = builder.BuildSfx(source, output, splitSize, options, progress, Cts.Token);
         progress.Done();
 
         Console.WriteLine();
@@ -206,7 +227,7 @@ internal static class Cli
         using (var payload = SfxComposer.OpenPayload(source, footer))
         {
             SZipEngine.Unpack(payload, dest, footer.Method,
-                footer.IsEncrypted ? password : null, footer.IsPrecompressed, progress, footer.WindowLog);
+                footer.IsEncrypted ? password : null, footer.IsPrecompressed, progress, footer.WindowLog, Cts.Token);
         }
         progress.Done();
 
