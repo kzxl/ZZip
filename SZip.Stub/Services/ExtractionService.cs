@@ -91,7 +91,7 @@ namespace SZip.Stub.Services
 
             using var payload = SfxComposer.OpenPayload(_selfPath, _footer);
             SZipEngine.Unpack(payload, destinationPath, _footer.Method,
-                _footer.IsEncrypted ? password : null, _footer.IsPrecompressed, progress);
+                _footer.IsEncrypted ? password : null, _footer.IsPrecompressed, progress, _footer.WindowLog);
         }
 
         private static string FormatSize(long bytes)
