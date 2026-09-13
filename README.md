@@ -1,106 +1,123 @@
-# Ztar
+# 🌌 ZeroZip — Ultra Compression & Instant SFX Packaging Studio
 
-Studio siêu nén và tạo tệp tự giải nén (SFX) gọn nhẹ cho Windows, kèm CLI và bộ giải nén đa nền tảng.
+<p align="center">
+  <strong>High-ratio compression studio and instant self-extracting archive (SFX) creator for Windows</strong><br/>
+  TAR Core + Zstandard/LZMA/Brotli Codecs • Append-Mode SFX • AES-256-GCM • Multiplatform Stubs
+</p>
 
-Ztar đóng gói thư mục/tệp thành một tệp `.exe` **tự giải nén** — người nhận chỉ cần chạy, không cần cài đặt gì. Lõi nén dùng TAR + zstd/LZMA/Brotli (không phải định dạng ZIP), nên tên là **Z**std + **tar** = Ztar.
+---
 
-## Tính năng
+## 📖 Overview
 
-- **SFX tức thì**: dựng tệp tự giải nén bằng mô hình append (ghép đuôi), không cần .NET SDK trên máy người dùng, không biên dịch lại.
-- **Nhiều thuật toán**: Zstandard (nhanh, đa luồng, LDM), LZMA (nén sâu nhất), Brotli, hoặc Store (chỉ đóng gói).
-- **Nén tầm xa** (`--long`): cửa sổ tới 2GB cho tệp rất lớn (game, ISO, ảnh máy ảo).
-- **Nén sâu kiểu repack** (`--precomp`): bung ngược các luồng đã nén sẵn (zlib/zip/png...) rồi nén lại — kỹ thuật của các bản repack game. Cần `precomp.exe` (tự dò; được nhúng vào SFX để máy nhận không cần cài).
-- **Mã hóa AES-256-GCM** có xác thực: phát hiện sửa đổi/cắt cụt, không chỉ chống lỗi ngẫu nhiên.
-- **Cắt mảnh**: chia thành nhiều phần `.001`, `.002`... (an toàn FAT32, dễ gửi).
-- **Bọc ZIP để gửi** (`--zip`): gói SFX vào `.zip` (Store) để né bộ lọc chặn `.exe`.
-- **Ước tính nhanh**: dự đoán tỉ lệ nén trong ~1 giây, cảnh báo dữ liệu khó nén.
-- **Kiểm tra & liệt kê**: xem nội dung và kiểm tra toàn vẹn không cần giải nén.
-- **Hủy giữa chừng**, tiến độ thật, kiểm tra CRC32.
-- **Giải nén đa nền tảng**: stub console chạy Windows/Linux/macOS.
+**ZeroZip** (powered by the sovereign **Ztar** engine) packages directories and files into standalone `.exe` **self-extracting archives (SFX)**. Recipients run the generated executable directly with zero setup, zero extraction dependencies, and no .NET runtime requirements.
 
-## Cấu trúc dự án
+Unlike standard zip utilities, ZeroZip couples native POSIX TAR stream packaging with state-of-the-art compression algorithms (**Zstandard**, **LZMA**, **Brotli**) and authenticated **AES-256-GCM** encryption.
 
-| Project | Mô tả |
-|---|---|
-| `Ztar.Core` | Thư viện lõi: định dạng SFX, engine nén/giải nén, codec, mã hóa, ước tính. |
-| `Ztar.Main` | Ứng dụng chính: GUI WinForms + CLI. Build ra `Ztar.exe`. |
-| `Ztar.Stub` | Bộ giải nén WinForms (Windows), nhúng vào `Ztar.exe`. |
-| `Ztar.StubConsole` | Bộ giải nén console đa nền tảng. |
-| `Ztar.Tests` | Bộ test xUnit (33 test). |
+Part of the sovereign **ZeroUniverse** application suite, ZeroZip is engineered for developer deployments, game repacking, firmware distribution, and resilient file archives.
 
-## Dùng bằng giao diện (GUI)
+---
 
-Chạy `Ztar.exe` không kèm tham số để mở giao diện:
+## 🌟 Key Features
 
-1. Chọn nguồn (thư mục hoặc tệp).
-2. Chọn nơi lưu `.exe` SFX.
-3. Chọn thuật toán, mức nén, mật khẩu (tùy chọn), cắt mảnh, bọc ZIP, nén sâu.
-4. Bấm **Kiểm tra nhanh** để ước tính tỉ lệ trước khi nén.
-5. Bấm **Bắt đầu Siêu Nén**.
+- ⚡ **Instant Append-Mode SFX**: Builds self-extracting executables via zero-recompile binary tail-append. Recipients require no .NET SDK or runtime.
+- 🗜️ **Multi-Algorithm Engine**:
+  - **Zstandard (zstd)**: Ultra-fast multi-threaded compression with long-distance matching (LDM).
+  - **LZMA**: Maximum compression ratio for dense source trees and distribution packages.
+  - **Brotli**: Optimized web and text compression.
+  - **Store**: Uncompressed tar packaging for rapid containerization.
+- 🌌 **Long-Range Compression (`--long`)**: Up to 2GB sliding dictionary window for massive files (disk images, ISOs, virtual machine snapshots).
+- 🎮 **Precomp Deep Repack Mode (`--precomp`)**: Unpacks pre-compressed streams (zlib, zip, png) within payloads and recompresses them using high-ratio codecs (game repacking technique).
+- 🔐 **Authenticated AES-256-GCM Encryption**: Provides cryptographic integrity verification against file truncation or tampering.
+- ✂️ **Multi-Part Volume Splitting**: Splits output into `.001`, `.002` chunks (FAT32-safe, email-friendly).
+- 🛡️ **ZIP Envelope Cloaking (`--zip`)**: Envelopes the executable inside a standard `.zip` store wrapper to bypass restrictive mail and network firewall executable filters.
+- ⏱️ **Rapid Ratio Estimation**: Predicts compression ratios in ~1 second before running long batch jobs.
+- 🌍 **Cross-Platform Extraction**: Console extraction stubs available for Windows, Linux, and macOS.
 
-## Dùng bằng dòng lệnh (CLI)
+---
 
-`Ztar.exe` khi có tham số sẽ chạy ở chế độ CLI.
+## 🏗 Project Layout
 
-```
-Ztar c <nguồn> [-o ra.exe] [-m zstd|lzma|brotli|store]
-               [--ultra|--normal|--fast] [--level N] [--window N] [--long]
-               [--threads N] [--split KÍCH_THƯỚC] [-p mật_khẩu] [--zip]
-               [--precomp] [--precomp-path <đường>] [--precomp-args <args>]
-Ztar x <sfx.exe> [-o thư_mục] [-p mật_khẩu]
-Ztar i <sfx.exe>
-Ztar l <sfx.exe> [-p mật_khẩu]
-Ztar t <sfx.exe> [-p mật_khẩu]
-Ztar e <nguồn>
-Ztar h
-```
+| Project | Description |
+| :--- | :--- |
+| **`Ztar.Core`** | Core library: SFX binary format, compression/decompression pipeline, codecs, AES-GCM, ratio estimator |
+| **`Ztar.Main`** | Primary application: Modern WinForms desktop GUI + unified CLI runner |
+| **`Ztar.Stub`** | Native WinForms GUI extraction stub embedded into SFX executables |
+| **`Ztar.StubConsole`** | Lightweight cross-platform console extraction stub |
+| **`Ztar.Tests`** | Automated regression test suite (33 xUnit unit & integration tests) |
 
-| Lệnh | Chức năng |
-|---|---|
-| `c` / `compress` | Nén nguồn thành SFX `.exe` |
-| `x` / `extract` | Giải nén một SFX |
-| `i` / `info` | Xem thông tin (thuật toán, chế độ, kích thước, CRC) |
-| `l` / `list` | Liệt kê nội dung, không giải nén |
-| `t` / `test` | Kiểm tra toàn vẹn (CRC + giải nén thử), không ghi đĩa |
-| `e` / `estimate` | Ước tính nhanh tỉ lệ nén |
-| `h` / `help` | Trợ giúp |
+---
 
-### Ví dụ
+## 💻 CLI Usage
 
-```
-Ztar c "C:\Data" -o Data.exe --ultra
-Ztar c game.iso -m lzma --level 22 --long --split 2GB
-Ztar c secret\ -o s.exe -p "MatKhau123" --zip
-Ztar c game\ -o repack.exe --precomp -m lzma
-Ztar e "C:\Data"
-Ztar l Data.exe
-Ztar t Data.exe
-Ztar x Data.exe -o C:\Out
+When executed with arguments, ZeroZip runs in headless CLI mode:
+
+```bash
+# Syntax
+zerozip c <source> [-o output.exe] [-m zstd|lzma|brotli|store]
+                   [--ultra|--normal|--fast] [--level N] [--window N] [--long]
+                   [--threads N] [--split SIZE] [-p password] [--zip]
+                   [--precomp] [--precomp-path <path>]
+zerozip x <sfx.exe> [-o out_dir] [-p password]
+zerozip i <sfx.exe>
+zerozip l <sfx.exe> [-p password]
+zerozip t <sfx.exe> [-p password]
+zerozip e <source>
+zerozip h
 ```
 
-Nhấn `Ctrl-C` để hủy giữa chừng (lần nhấn đầu dừng êm, lần hai buộc thoát).
+### Command Reference
 
-## Build và phát hành
+| Command | Action | Description |
+| :--- | :--- | :--- |
+| `c` / `compress` | Compress | Package source directory or file into standalone SFX `.exe` |
+| `x` / `extract` | Extract | Decompress payload to target directory |
+| `i` / `info` | Info | Inspect archive metadata (codec, mode, sizes, CRC checksum) |
+| `l` / `list` | List | Inspect archive file manifest without extracting to disk |
+| `t` / `test` | Test | Verify integrity (CRC validation and trial decompression) |
+| `e` / `estimate` | Estimate | Rapid ratio prediction (~1 sec) |
+| `h` / `help` | Help | Display command-line options and examples |
 
-Yêu cầu .NET SDK 10.
+### Practical Examples
 
-```powershell
-# Build toàn bộ
+```bash
+# Compress directory with ultra Zstandard preset
+zerozip c "C:\Data" -o Data.exe --ultra
+
+# LZMA maximum compression with 2GB volume splits
+zerozip c game.iso -m lzma --level 22 --long --split 2GB
+
+# Password-protected archive enveloped in ZIP wrapper
+zerozip c secret\ -o vault.exe -p "SecurePass123" --zip
+
+# Inspect archive contents without unpacking
+zerozip l Data.exe
+```
+
+---
+
+## 🔨 Build from Source
+
+### Prerequisites
+- [.NET SDK 10 / .NET 8 SDK](https://dotnet.microsoft.com/download)
+- Windows 10/11 (64-bit)
+
+### Build Commands
+
+```bash
+# Build complete solution
 dotnet build Ztar.slnx -c Release
 
-# Chạy test
+# Run automated test suite
 dotnet test Ztar.Tests/Ztar.Tests.csproj
 
-# Phát hành bản gọn để gửi (1 tệp, không cần .NET runtime)
+# Package standalone release executable
 ./publish.ps1
 ```
 
-`publish.ps1` tạo `Ztar.exe` self-contained single-file trong thư mục `dist/`.
+The `publish.ps1` script produces a self-contained, single-file executable in `dist/`.
 
-## Ghi chú về nén sâu (precomp)
+---
 
-Để đạt tỉ lệ kiểu repack game, `--precomp` cần `precomp.exe` (của Schnaader). Ztar **không kèm sẵn** công cụ này; đặt `precomp.exe` cạnh `Ztar.exe`, trong `tools/`, hoặc trong PATH. Khi tạo SFX có precomp, `precomp.exe` được nhúng vào payload để máy người nhận giải nén được mà không cần cài.
+## 📄 License
 
-## Giấy phép
-
-MIT — xem [LICENSE](LICENSE).
+Licensed under the **MIT License**. Part of the sovereign **ZeroUniverse** industrial computing ecosystem.
