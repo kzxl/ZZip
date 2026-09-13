@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
@@ -123,6 +123,39 @@ namespace ZeroZip.Main
             btnEstimate = new Button() { Text = "Kiểm tra nhanh tỉ lệ nén", Location = new Point(20, 275), Size = new Size(250, 30) };
             btnEstimate.Click += BtnEstimate_Click;
             this.Controls.Add(btnEstimate);
+
+            var btnContextMenu = new Button()
+            {
+                Text = ShellContextMenuService.IsRegistered() ? "✓ Đã tích hợp Menu Chuột Phải" : "⚙ Tích hợp Menu Chuột Phải",
+                Location = new Point(280, 275),
+                Size = new Size(250, 30)
+            };
+            btnContextMenu.Click += (s, e) =>
+            {
+                if (ShellContextMenuService.IsRegistered())
+                {
+                    var res = MessageBox.Show("ZeroZip hiện đã có trong menu chuột phải của Windows. Bạn có muốn gỡ bỏ tích hợp không?", "Menu Chuột Phải", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    if (res == DialogResult.Yes)
+                    {
+                        ShellContextMenuService.Unregister();
+                        btnContextMenu.Text = "⚙ Tích hợp Menu Chuột Phải";
+                        MessageBox.Show("Đã gỡ bỏ ZeroZip khỏi menu chuột phải Windows Explorer.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+                else
+                {
+                    if (ShellContextMenuService.Register())
+                    {
+                        btnContextMenu.Text = "✓ Đã tích hợp Menu Chuột Phải";
+                        MessageBox.Show("Đã đăng ký thành công ZeroZip vào menu chuột phải Windows Explorer (Files, Folders & .ztar).", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Không thể ghi Registry người dùng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+            this.Controls.Add(btnContextMenu);
 
             progressBar = new ProgressBar() { Location = new Point(20, 320), Size = new Size(510, 20), Style = ProgressBarStyle.Continuous };
             this.Controls.Add(progressBar);

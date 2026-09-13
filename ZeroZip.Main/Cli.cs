@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using ZeroZip.Core;
@@ -34,6 +34,8 @@ internal static class Cli
                 "l" or "list" or "-l" => RunList(args),
                 "t" or "test" or "-t" => RunTest(args),
                 "e" or "estimate" or "--estimate" => RunEstimate(args),
+                "register-context-menu" or "--register" => RunRegisterContextMenu(),
+                "unregister-context-menu" or "--unregister" => RunUnregisterContextMenu(),
                 "h" or "help" or "-h" or "--help" or "/?" => PrintHelp(),
                 _ => Fail($"Lệnh không hợp lệ: {verb}"),
             };
@@ -439,6 +441,28 @@ Tham số:
         int unit = 0;
         while (size >= 1024 && unit < units.Length - 1) { size /= 1024; unit++; }
         return $"{size:0.##} {units[unit]}";
+    }
+
+    private static int RunRegisterContextMenu()
+    {
+        Console.WriteLine("Đang đăng ký ZeroZip vào Windows Explorer context menu...");
+        if (ShellContextMenuService.Register())
+        {
+            Console.WriteLine("Thành công: Đã thêm các mục ZeroZip vào menu chuột phải (File, Thư mục, và .ztar).");
+            return 0;
+        }
+        return Fail("Không thể ghi vào Registry người dùng.");
+    }
+
+    private static int RunUnregisterContextMenu()
+    {
+        Console.WriteLine("Đang gỡ bỏ ZeroZip khỏi Windows Explorer context menu...");
+        if (ShellContextMenuService.Unregister())
+        {
+            Console.WriteLine("Thành công: Đã gỡ bỏ toàn bộ liên kết ZeroZip khỏi context menu.");
+            return 0;
+        }
+        return Fail("Gỡ bỏ thất bại hoặc mục không tồn tại.");
     }
 
     private static int Fail(string message)
