@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ZeroZip.Core/ZeroZip.Core.csproj" />
+  <Project Path="ZeroZip.Main/ZeroZip.Main.csproj" />
+  <Project Path="ZeroZip.Stub/ZeroZip.Stub.csproj" />
+  <Project Path="ZeroZip.StubConsole/ZeroZip.StubConsole.csproj" />
+  <Project Path="ZeroZip.Tests/ZeroZip.Tests.csproj" />
+</Solution>
