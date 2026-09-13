@@ -37,9 +37,9 @@ namespace Ztar.Main
 
         private void InitializeComponent()
         {
-            this.Text = "Ztar - Studio Siêu Nén (SFX Maker UA)";
+            this.Text = "ZeroZip — Ultra-Compression Studio (ZeroUniverse)";
             TrySetWindowIcon();
-            this.Size = new Size(560, 470);
+            this.Size = new Size(570, 480);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -137,6 +137,65 @@ namespace Ztar.Main
             btnCancel = new Button() { Text = "Hủy", Location = new Point(230, 395), Size = new Size(90, 45), Enabled = false };
             btnCancel.Click += (s, e) => { _cts?.Cancel(); btnCancel.Enabled = false; lblStatus.Text = "Đang hủy..."; };
             this.Controls.Add(btnCancel);
+
+            ApplyZeroUiDarkTheme();
+        }
+
+        private void ApplyZeroUiDarkTheme()
+        {
+            var bgPrimary = Color.FromArgb(17, 19, 31);
+            var bgInput = Color.FromArgb(29, 32, 52);
+            var bgHover = Color.FromArgb(38, 42, 68);
+            var borderSubtle = Color.FromArgb(46, 52, 78);
+            var textPrimary = Color.FromArgb(241, 245, 249);
+            var textSecondary = Color.FromArgb(148, 163, 184);
+            var accent = Color.FromArgb(99, 102, 241);
+            var accentHover = Color.FromArgb(129, 140, 248);
+
+            this.BackColor = bgPrimary;
+            this.ForeColor = textPrimary;
+            this.Font = new Font("Segoe UI", 9.25f, FontStyle.Regular);
+
+            foreach (Control ctrl in this.Controls)
+            {
+                if (ctrl is Label lbl)
+                {
+                    lbl.ForeColor = (lbl == lblStatus) ? accentHover : textSecondary;
+                }
+                else if (ctrl is TextBox txt)
+                {
+                    txt.BackColor = bgInput;
+                    txt.ForeColor = textPrimary;
+                    txt.BorderStyle = BorderStyle.FixedSingle;
+                }
+                else if (ctrl is ComboBox cmb)
+                {
+                    cmb.BackColor = bgInput;
+                    cmb.ForeColor = textPrimary;
+                    cmb.FlatStyle = FlatStyle.Flat;
+                }
+                else if (ctrl is CheckBox chk)
+                {
+                    chk.ForeColor = textPrimary;
+                }
+                else if (ctrl is Button btn)
+                {
+                    btn.FlatStyle = FlatStyle.Flat;
+                    btn.FlatAppearance.BorderSize = 1;
+                    if (btn == btnCompress)
+                    {
+                        btn.BackColor = accent;
+                        btn.ForeColor = Color.White;
+                        btn.FlatAppearance.BorderColor = accent;
+                    }
+                    else
+                    {
+                        btn.BackColor = bgHover;
+                        btn.ForeColor = textPrimary;
+                        btn.FlatAppearance.BorderColor = borderSubtle;
+                    }
+                }
+            }
         }
 
         private void BtnBrowseSource_Click(object sender, EventArgs e)
