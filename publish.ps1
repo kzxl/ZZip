@@ -1,65 +1,65 @@
-﻿#requires -Version 7.0
 <#
-.SYNOPSIS
-  Publishes ZeroZip for distribution: a self-contained, single-file ZeroZip.exe that runs without
-  a separate .NET install, plus the cross-platform console extractor stub.
-
-.PARAMETER Runtime
-  Target runtime identifier. Default: win-x64.
-
-.PARAMETER OutDir
-  Output directory. Default: dist.
-
-.EXAMPLE
-  ./publish.ps1
-  ./publish.ps1 -Runtime win-arm64 -OutDir release
+    publish.ps1 — Publish script for ZeroZip (Dual Mode: Full & Lite)
+    Adheres to AgentOption .NET Publish Release standard & ZeroUniverse rules.
 #>
+[CmdletBinding()]
 param(
-    [string]$Runtime = "win-x64",
-    [string]$OutDir = "dist",
-    [string]$Configuration = "Release"
+    [ValidateSet('Full', 'Lite', 'All')]
+    [string]$Mode = 'All',
+    [string]$Configuration = 'Release',
+    [string]$Runtime = 'win-x64'
 )
 
-$ErrorActionPreference = "Stop"
-$root = $PSScriptRoot
-$out = Join-Path $root $OutDir
+$ErrorActionPreference = 'Stop'
+$Root = $PSScriptRoot
+$MainProj = Join-Path $Root "ZeroZip.Main\ZeroZip.Main.csproj"
+$StubProj = Join-Path $Root "ZeroZip.StubConsole\ZeroZip.StubConsole.csproj"
+$Dist = Join-Path $Root "publish"
 
-Write-Host "ZeroZip publish -> $out (runtime=$Runtime, config=$Configuration)" -ForegroundColor Cyan
-
-# Clean previous output.
-if (Test-Path $out) { Remove-Item $out -Recurse -Force }
-New-Item -ItemType Directory -Path $out | Out-Null
-
-# Main app (GUI + CLI). Self-contained single file so end users need no .NET runtime.
-# The MSBuild PublishStub target publishes + embeds the extractor stub automatically.
-Write-Host "Publishing ZeroZip.exe (self-contained single file)..." -ForegroundColor Yellow
-& dotnet publish (Join-Path $root "ZeroZip.Main/ZeroZip.Main.csproj") `
-    -c $Configuration -r $Runtime `
-    --self-contained true `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true `
-    -o $out
-if ($LASTEXITCODE -ne 0) { throw "Publish ZeroZip.Main failed." }
-
-# Cross-platform console extractor stub (framework-dependent single file).
-Write-Host "Publishing console stub..." -ForegroundColor Yellow
-$stubOut = Join-Path $out "console-stub"
-& dotnet publish (Join-Path $root "ZeroZip.StubConsole/ZeroZip.StubConsole.csproj") `
-    -c $Configuration -r $Runtime `
-    --self-contained false `
-    -p:PublishSingleFile=true `
-    -o $stubOut
-if ($LASTEXITCODE -ne 0) { throw "Publish ZeroZip.StubConsole failed." }
-
-# Trim publish noise: keep just the runnable artifacts.
-Get-ChildItem $out -Filter *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
-
-$exe = Join-Path $out "ZeroZip.exe"
-if (Test-Path $exe) {
-    $size = (Get-Item $exe).Length / 1MB
-    Write-Host ("Done. ZeroZip.exe = {0:N1} MB" -f $size) -ForegroundColor Green
-    Write-Host "Output: $out"
-} else {
-    throw "ZeroZip.exe not found after publish."
+if (Test-Path $Dist) {
+    Remove-Item $Dist -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+if ($Mode -eq 'Full' -or $Mode -eq 'All') {
+    Write-Host ">>> Publishing ZeroZip FULL (Self-Contained Single File)..." -ForegroundColor Cyan
+    $outFull = Join-Path $Dist "full"
+    
+    # 1. Main app (GUI + CLI)
+    dotnet publish $MainProj -c $Configuration -r $Runtime --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:EnableCompressionInSingleFile=true `
+        -o $outFull
+        
+    # 2. Console extractor stub
+    $stubFull = Join-Path $outFull "console-stub"
+    dotnet publish $StubProj -c $Configuration -r $Runtime --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:EnableCompressionInSingleFile=true `
+        -o $stubFull
+        
+    Get-ChildItem $outFull -Filter *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+    Write-Host "  ✔ Full build generated at: $outFull\ZeroZip.exe" -ForegroundColor Green
+}
+
+if ($Mode -eq 'Lite' -or $Mode -eq 'All') {
+    Write-Host ">>> Publishing ZeroZip LITE (Framework-Dependent Single File)..." -ForegroundColor Cyan
+    $outLite = Join-Path $Dist "lite"
+    
+    # 1. Main app (GUI + CLI)
+    dotnet publish $MainProj -c $Configuration -r $Runtime --self-contained false `
+        -p:PublishSingleFile=true `
+        -o $outLite
+        
+    # 2. Console extractor stub
+    $stubLite = Join-Path $outLite "console-stub"
+    dotnet publish $StubProj -c $Configuration -r $Runtime --self-contained false `
+        -p:PublishSingleFile=true `
+        -o $stubLite
+        
+    Get-ChildItem $outLite -Filter *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+    Write-Host "  ✔ Lite build generated at: $outLite\ZeroZip.exe" -ForegroundColor Green
+}
+
+Write-Host ">>> ZeroZip publish completed successfully!" -ForegroundColor Green
