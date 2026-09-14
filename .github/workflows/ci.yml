@@ -22,10 +22,10 @@ jobs:
           dotnet-quality: 'preview'
 
       - name: Restore
-        run: dotnet restore Ztar.slnx
+        run: dotnet restore ZeroZip.slnx
 
       - name: Build
-        run: dotnet build Ztar.slnx -c Release --no-restore
+        run: dotnet build ZeroZip.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test Ztar.Tests/Ztar.Tests.csproj -c Release --no-build --verbosity normal
+        run: dotnet test ZeroZip.Tests/ZeroZip.Tests.csproj -c Release --no-build --verbosity normal
