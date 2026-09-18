@@ -252,6 +252,7 @@ namespace ZeroZip.Main
             cmbMethod.Items.Add("LZMA (nén sâu nhất, chuẩn đóng gói)");
             cmbMethod.Items.Add("Brotli (nén text/web/json)");
             cmbMethod.Items.Add("Không nén (Store - đóng gói thô)");
+            cmbMethod.Items.Add("ZeroTelemetry (Nghiên cứu: Gorilla XOR / Delta DoD)");
             cmbMethod.SelectedIndex = 0;
             cardEngine.ContentPanel.Controls.Add(cmbMethod);
 
@@ -594,6 +595,7 @@ namespace ZeroZip.Main
             1 => CompressionMethod.Lzma,
             2 => CompressionMethod.Brotli,
             3 => CompressionMethod.Store,
+            4 => CompressionMethod.ZeroTelemetry,
             _ => CompressionMethod.Zstd,
         };
 

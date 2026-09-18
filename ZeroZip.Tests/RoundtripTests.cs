@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using ZeroZip.Core;
 
@@ -18,6 +18,7 @@ namespace ZeroZip.Tests
         [InlineData(CompressionMethod.Lzma)]
         [InlineData(CompressionMethod.Brotli)]
         [InlineData(CompressionMethod.Store)]
+        [InlineData(CompressionMethod.ZeroTelemetry)]
         public void Appended_AllCodecs_RoundTrip(CompressionMethod method)
         {
             using var ws = new TempWorkspace();

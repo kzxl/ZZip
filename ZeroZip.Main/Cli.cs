@@ -412,7 +412,8 @@ Tham số:
         "lzma" or "lz" or "xz" => CompressionMethod.Lzma,
         "brotli" or "br" => CompressionMethod.Brotli,
         "store" or "none" or "copy" => CompressionMethod.Store,
-        _ => throw new ArgumentException($"Thuật toán không hợp lệ: {text} (zstd|lzma|brotli|store)"),
+        "telemetry" or "ztel" or "gorilla" => CompressionMethod.ZeroTelemetry,
+        _ => throw new ArgumentException($"Thuật toán không hợp lệ: {text} (zstd|lzma|brotli|store|telemetry)"),
     };
 
     private static string NextArg(string[] args, ref int i, string flag)
