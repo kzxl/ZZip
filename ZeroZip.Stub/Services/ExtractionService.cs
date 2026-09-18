@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using ZeroZip.Core;
 
@@ -79,19 +79,22 @@ namespace ZeroZip.Stub.Services
             _footer ??= SfxComposer.ReadFooter(_selfPath)
                 ?? throw new InvalidOperationException("Không có dữ liệu ZeroZip để giải nén.");
 
-            if (_footer.IsEncrypted && string.IsNullOrEmpty(password))
-                throw new InvalidOperationException("Gói dữ liệu được mã hóa. Cần nhập mật khẩu.");
-
-            // Integrity check over the compressed bytes before extraction.
-            using (var verifyStream = SfxComposer.OpenPayload(_selfPath, _footer))
+            if (_footer.IsEncrypted)
             {
-                if (!ZtarEngine.VerifyCrc(verifyStream, _footer.Crc32))
-                    throw new InvalidDataException("Dữ liệu nén bị hỏng (CRC32 không khớp). Tệp có thể bị lỗi khi tải về.");
+                if (string.IsNullOrEmpty(password))
+                    throw new InvalidOperationException("Gói dữ liệu được mã hóa. Cần nhập mật khẩu.");
+
+                // Instant password verification before starting extraction
+                using var probe = SfxComposer.OpenPayload(_selfPath, _footer);
+                if (!PayloadCrypto.CheckPassword(probe, password))
+                    throw new InvalidDataException("Sai mật khẩu.");
             }
 
+            // Single-pass streaming extract with on-the-fly CRC32 verification (Zero redundant I/O)
             using var payload = SfxComposer.OpenPayload(_selfPath, _footer);
-            ZtarEngine.Unpack(payload, destinationPath, _footer.Method,
-                _footer.IsEncrypted ? password : null, _footer.IsPrecompressed, progress, _footer.WindowLog);
+            ZtarEngine.UnpackVerified(payload, destinationPath, _footer.Method,
+                _footer.IsEncrypted ? password : null, _footer.IsPrecompressed, progress, _footer.WindowLog,
+                expectedCrc: _footer.Crc32);
         }
 
         private static string FormatSize(long bytes)

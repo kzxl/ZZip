@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
-using ZeroZip.Core.Streams;
+using ZeroCompression.Core.Streams;
 
 namespace ZeroZip.Core
 {

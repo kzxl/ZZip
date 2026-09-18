@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace ZeroZip.Core
@@ -23,18 +23,7 @@ namespace ZeroZip.Core
         Precompressed = 1 << 3,
     }
 
-    /// <summary>Compression codec applied to the TAR payload.</summary>
-    public enum CompressionMethod : byte
-    {
-        /// <summary>Zstandard. Fast, multi-threaded, long-distance matching. Default.</summary>
-        Zstd = 0,
-        /// <summary>LZMA (.lz container). Highest ratio on compressible data, slower.</summary>
-        Lzma = 1,
-        /// <summary>Brotli. Good ratio on text/web assets.</summary>
-        Brotli = 2,
-        /// <summary>Stored without compression.</summary>
-        Store = 3,
-    }
+
 
     /// <summary>
     /// Fixed-size trailer written at the very end of an ZeroZip SFX executable (or a

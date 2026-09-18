@@ -13,10 +13,7 @@
     <ApplicationIcon>..\assets\ZeroZip.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
-    <PackageReference Include="SharpCompress" Version="0.49.1" />
-  </ItemGroup>
+
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroZip.Core\ZeroZip.Core.csproj" />

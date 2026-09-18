@@ -5,13 +5,13 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Full', 'Lite', 'All')]
-    [string]$Mode = 'All',
+    [string]$Mode = 'Lite',
     [string]$Configuration = 'Release',
     [string]$Runtime = 'win-x64'
 )
 
 $ErrorActionPreference = 'Stop'
-$Root = $PSScriptRoot
+$Root = if (![string]::IsNullOrEmpty($PSScriptRoot)) { $PSScriptRoot } else { (Get-Location).Path }
 $MainProj = Join-Path $Root "ZeroZip.Main\ZeroZip.Main.csproj"
 $StubProj = Join-Path $Root "ZeroZip.StubConsole\ZeroZip.StubConsole.csproj"
 $Dist = Join-Path $Root "publish"

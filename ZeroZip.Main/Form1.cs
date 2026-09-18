@@ -254,19 +254,19 @@ namespace ZeroZip.Main
             }
         }
 
-        private ZeroZip.Core.CompressionMethod SelectedMethod() => cmbMethod.SelectedIndex switch
+        private CompressionMethod SelectedMethod() => cmbMethod.SelectedIndex switch
         {
-            1 => ZeroZip.Core.CompressionMethod.Lzma,
-            2 => ZeroZip.Core.CompressionMethod.Brotli,
-            3 => ZeroZip.Core.CompressionMethod.Store,
-            _ => ZeroZip.Core.CompressionMethod.Zstd,
+            1 => CompressionMethod.Lzma,
+            2 => CompressionMethod.Brotli,
+            3 => CompressionMethod.Store,
+            _ => CompressionMethod.Zstd,
         };
 
-        private ZeroZip.Core.CompressionProfile SelectedProfile() => cmbProfile.SelectedIndex switch
+        private CompressionProfile SelectedProfile() => cmbProfile.SelectedIndex switch
         {
-            0 => ZeroZip.Core.CompressionProfile.Fast,
-            1 => ZeroZip.Core.CompressionProfile.Normal,
-            _ => ZeroZip.Core.CompressionProfile.Ultra,
+            0 => CompressionProfile.Fast,
+            1 => CompressionProfile.Normal,
+            _ => CompressionProfile.Ultra,
         };
 
         private async void BtnEstimate_Click(object sender, EventArgs e)
@@ -329,14 +329,14 @@ namespace ZeroZip.Main
 
             try
             {
-                var options = ZeroZip.Core.CompressionOptions.FromProfile(profile, method);
+                var options = CompressionOptions.FromProfile(profile, method);
                 options.Password = password;
                 options.UsePrecomp = usePrecomp;
                 if (longMode)
                 {
                     options.LongDistanceMatching = true;
-                    if (options.WindowLog < ZeroZip.Core.CompressionOptions.MaxLongWindowLog)
-                        options.WindowLog = ZeroZip.Core.CompressionOptions.MaxLongWindowLog;
+                    if (options.WindowLog < CompressionOptions.MaxLongWindowLog)
+                        options.WindowLog = CompressionOptions.MaxLongWindowLog;
                 }
 
                 // UI gọi Service và không chứa Logic TarFile hay Process Start

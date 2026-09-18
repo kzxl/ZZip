@@ -7,8 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SharpCompress" Version="0.49.1" />
-    <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
+    <ProjectReference Include="..\..\..\ZeroPlatform\ZeroCompression\src\ZeroCompression.Core\ZeroCompression.Core.csproj" />
   </ItemGroup>
 
 </Project>

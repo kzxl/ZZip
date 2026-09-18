@@ -20,4 +20,13 @@
     <NeutralLanguage>vi-VN</NeutralLanguage>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Using Include="ZeroCompression.Core" />
+    <Using Include="ZeroCompression.Core.Hashing" />
+    <Using Include="ZeroCompression.Core.Analysis" />
+    <Using Include="ZeroCompression.Core.Buffers" />
+    <Using Include="ZeroCompression.Core.Crypto" />
+    <Using Include="ZeroCompression.Core.Streams" />
+  </ItemGroup>
+
 </Project>

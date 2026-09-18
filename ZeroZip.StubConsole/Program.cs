@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using ZeroZip.Core;
 
@@ -94,22 +94,21 @@ internal static class Program
 
         try
         {
-            // Integrity check before extraction.
-            using (var verify = SfxComposer.OpenPayload(selfPath, footer))
+            if (footer.IsEncrypted)
             {
-                if (!ZtarEngine.VerifyCrc(verify, footer.Crc32))
+                using var probe = SfxComposer.OpenPayload(selfPath, footer);
+                if (!PayloadCrypto.CheckPassword(probe, password!))
                 {
-                    Console.Error.WriteLine("CRC32 không khớp - dữ liệu hỏng.");
+                    Console.Error.WriteLine("Sai mật khẩu.");
                     return 1;
                 }
             }
 
             var progress = new ConsoleProgress(footer.OriginalSize);
-            using (var payload = SfxComposer.OpenPayload(selfPath, footer))
-            {
-                ZtarEngine.Unpack(payload, target, footer.Method,
-                    footer.IsEncrypted ? password : null, footer.IsPrecompressed, progress, footer.WindowLog);
-            }
+            using var payload = SfxComposer.OpenPayload(selfPath, footer);
+            ZtarEngine.UnpackVerified(payload, target, footer.Method,
+                footer.IsEncrypted ? password : null, footer.IsPrecompressed,
+                progress, footer.WindowLog, expectedCrc: footer.Crc32);
             progress.Done();
 
             Console.WriteLine("Giải nén hoàn tất.");
