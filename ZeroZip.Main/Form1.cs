@@ -70,8 +70,8 @@ namespace ZeroZip.Main
         {
             this.Text = "ZeroZip — Sovereign Ultra-Compression Studio (ZeroUniverse)";
             TrySetWindowIcon();
-            this.Size = new Size(880, 740);
-            this.MinimumSize = new Size(840, 700);
+            this.Size = new Size(895, 875);
+            this.MinimumSize = new Size(860, 680);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.AllowDrop = true;
 
@@ -83,8 +83,8 @@ namespace ZeroZip.Main
             var pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 60,
-                Padding = new Padding(20, 10, 20, 10),
+                Height = 56,
+                Padding = new Padding(20, 8, 20, 8),
                 BackColor = Color.Transparent
             };
 
@@ -92,7 +92,7 @@ namespace ZeroZip.Main
             {
                 Text = "⚡ ZEROZIP STUDIO",
                 Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
-                Location = new Point(18, 10),
+                Location = new Point(18, 8),
                 AutoSize = true,
                 ForeColor = ZeroTheme.Colors.Primary
             };
@@ -102,7 +102,7 @@ namespace ZeroZip.Main
             {
                 Text = "Sovereign Ultra-Compression & Archival Suite — ZeroUniverse",
                 Font = new Font("Segoe UI", 8.75f, FontStyle.Regular),
-                Location = new Point(20, 34),
+                Location = new Point(20, 32),
                 AutoSize = true,
                 ForeColor = ZeroTheme.Colors.TextSecondary
             };
@@ -112,8 +112,8 @@ namespace ZeroZip.Main
             {
                 Text = ZeroTheme.IsDark ? "☀️ Giao diện Sáng" : "🌙 Giao diện Tối",
                 ButtonStyle = ZeroButtonStyle.Ghost,
-                Size = new Size(150, 34),
-                Location = new Point(690, 14),
+                Size = new Size(150, 32),
+                Location = new Point(705, 12),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnToggleTheme.Click += (s, e) =>
@@ -126,14 +126,12 @@ namespace ZeroZip.Main
             };
             pnlHeader.Controls.Add(btnToggleTheme);
 
-            this.Controls.Add(pnlHeader);
-
             // TabControl Navigation
             tabControl = new TabControlEx
             {
                 Dock = DockStyle.Fill,
                 TabStyle = TabStyle.Pill,
-                TabHeight = 40,
+                TabHeight = 38,
                 TabWidth = 260
             };
 
@@ -143,23 +141,23 @@ namespace ZeroZip.Main
             BuildStudioTab(tabStudio);
             BuildInspectorTab(tabInspector);
 
+            // Add tabControl first so pnlHeader docks above it properly
             this.Controls.Add(tabControl);
+            this.Controls.Add(pnlHeader);
         }
 
         private void BuildStudioTab(TabPageEx page)
         {
-            page.AutoScroll = true;
-
             var pnlContainer = new Panel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                Padding = new Padding(12)
+                Padding = new Padding(10)
             };
             page.Controls.Add(pnlContainer);
 
-            int currentY = 10;
-            const int cardWidth = 820;
+            int currentY = 8;
+            const int cardWidth = 840;
 
             // --- Card 1: Nguồn dữ liệu & Tệp đích ---
             var cardSource = new Card
@@ -167,17 +165,17 @@ namespace ZeroZip.Main
                 Title = "1. Nguồn Dữ Liệu & Tệp Đích",
                 Subtitle = "Kéo thả thư mục hoặc tệp vào đây, hoặc nhấn nút chọn đường dẫn",
                 StepNumber = 1,
-                Size = new Size(cardWidth, 140),
+                Size = new Size(cardWidth, 195),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblSrc = new Label { Text = "Nguồn (Thư mục / Tệp):", Location = new Point(14, 10), AutoSize = true };
+            var lblSrc = new Label { Text = "Nguồn (Thư mục / Tệp):", Location = new Point(14, 6), AutoSize = true };
             cardSource.ContentPanel.Controls.Add(lblSrc);
 
             txtSource = new ButtonEdit
             {
-                Location = new Point(14, 30),
+                Location = new Point(14, 26),
                 Size = new Size(540, 32),
                 PlaceholderText = "Chọn hoặc kéo thả thư mục / tệp cần nén..."
             };
@@ -188,7 +186,7 @@ namespace ZeroZip.Main
             {
                 Text = "📁 Thư mục",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(564, 30),
+                Location = new Point(564, 26),
                 Size = new Size(115, 32)
             };
             btnBrowseSourceFolder.Click += (s, e) => BrowseSourceFolder();
@@ -198,18 +196,18 @@ namespace ZeroZip.Main
             {
                 Text = "📄 Tệp tin",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(687, 30),
+                Location = new Point(687, 26),
                 Size = new Size(115, 32)
             };
             btnBrowseSourceFile.Click += (s, e) => BrowseSourceFile();
             cardSource.ContentPanel.Controls.Add(btnBrowseSourceFile);
 
-            var lblDst = new Label { Text = "Lưu thành (.exe SFX / .ztar):", Location = new Point(14, 68), AutoSize = true };
+            var lblDst = new Label { Text = "Lưu thành (.exe SFX / .ztar):", Location = new Point(14, 66), AutoSize = true };
             cardSource.ContentPanel.Controls.Add(lblDst);
 
             txtDest = new ButtonEdit
             {
-                Location = new Point(14, 88),
+                Location = new Point(14, 86),
                 Size = new Size(665, 32),
                 PlaceholderText = "Đường dẫn tệp đầu ra (.exe SFX)..."
             };
@@ -220,14 +218,14 @@ namespace ZeroZip.Main
             {
                 Text = "💾 Lưu...",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(687, 88),
+                Location = new Point(687, 86),
                 Size = new Size(115, 32)
             };
             btnBrowseDest.Click += (s, e) => BrowseDest();
             cardSource.ContentPanel.Controls.Add(btnBrowseDest);
 
             pnlContainer.Controls.Add(cardSource);
-            currentY += 150;
+            currentY += 203;
 
             // --- Card 2: Thuật toán & Thông số nén ---
             var cardEngine = new Card
@@ -235,17 +233,17 @@ namespace ZeroZip.Main
                 Title = "2. Thuật Toán & Thông Số Nén",
                 Subtitle = "Lựa chọn động cơ nén tối ưu theo mục đích sử dụng",
                 StepNumber = 2,
-                Size = new Size(cardWidth, 140),
+                Size = new Size(cardWidth, 170),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblMethod = new Label { Text = "Thuật toán nén:", Location = new Point(14, 10), AutoSize = true };
+            var lblMethod = new Label { Text = "Thuật toán nén:", Location = new Point(14, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblMethod);
 
             cmbMethod = new ComboBoxEdit
             {
-                Location = new Point(14, 30),
+                Location = new Point(14, 26),
                 Size = new Size(250, 32)
             };
             cmbMethod.Items.Add("⭐ Tự động nhận diện (Adaptive Auto-Detect)");
@@ -257,12 +255,12 @@ namespace ZeroZip.Main
             cmbMethod.SelectedIndex = 0;
             cardEngine.ContentPanel.Controls.Add(cmbMethod);
 
-            var lblProfile = new Label { Text = "Mức nén (Profile):", Location = new Point(280, 10), AutoSize = true };
+            var lblProfile = new Label { Text = "Mức nén (Profile):", Location = new Point(280, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblProfile);
 
             cmbProfile = new ComboBoxEdit
             {
-                Location = new Point(280, 30),
+                Location = new Point(280, 26),
                 Size = new Size(180, 32)
             };
             cmbProfile.Items.Add("Nhanh (Fast)");
@@ -271,12 +269,12 @@ namespace ZeroZip.Main
             cmbProfile.SelectedIndex = 2;
             cardEngine.ContentPanel.Controls.Add(cmbProfile);
 
-            var lblSplit = new Label { Text = "Cắt Volume (Split):", Location = new Point(480, 10), AutoSize = true };
+            var lblSplit = new Label { Text = "Cắt Volume (Split):", Location = new Point(480, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblSplit);
 
             cmbSplitMode = new ComboBoxEdit
             {
-                Location = new Point(480, 30),
+                Location = new Point(480, 26),
                 Size = new Size(322, 32)
             };
             cmbSplitMode.Items.Add("Nhúng trực tiếp (1 tệp .exe)");
@@ -289,7 +287,7 @@ namespace ZeroZip.Main
             chkWrapZip = new CheckEdit
             {
                 Text = "Bọc ZIP bảo vệ (né bộ lọc chặn .exe)",
-                Location = new Point(14, 76),
+                Location = new Point(14, 66),
                 Size = new Size(250, 24)
             };
             cardEngine.ContentPanel.Controls.Add(chkWrapZip);
@@ -298,7 +296,7 @@ namespace ZeroZip.Main
             chkPrecomp = new CheckEdit
             {
                 Text = precompOk ? "Nén sâu repack (precomp)" : "Nén repack (chưa có precomp.exe)",
-                Location = new Point(280, 76),
+                Location = new Point(280, 66),
                 Size = new Size(240, 24),
                 Enabled = precompOk
             };
@@ -307,13 +305,13 @@ namespace ZeroZip.Main
             chkLong = new CheckEdit
             {
                 Text = "Nén tầm xa (cửa sổ Zstd 2GB)",
-                Location = new Point(530, 76),
+                Location = new Point(530, 66),
                 Size = new Size(260, 24)
             };
             cardEngine.ContentPanel.Controls.Add(chkLong);
 
             pnlContainer.Controls.Add(cardEngine);
-            currentY += 150;
+            currentY += 178;
 
             // --- Card 3: Bảo mật mã hóa ---
             var cardSecurity = new Card
@@ -321,18 +319,18 @@ namespace ZeroZip.Main
                 Title = "3. Bảo Mật & Xác Thực Toàn Vẹn (AES-256-GCM AEAD)",
                 Subtitle = "Tùy chọn mã hóa đối xứng xác thực với cơ chế kiểm tra mật khẩu tức thì <5ms",
                 StepNumber = 3,
-                Size = new Size(cardWidth, 85),
+                Size = new Size(cardWidth, 138),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblPwd = new Label { Text = "Mật khẩu bảo vệ (tùy chọn):", Location = new Point(14, 10), AutoSize = true };
+            var lblPwd = new Label { Text = "Mật khẩu bảo vệ (tùy chọn):", Location = new Point(14, 6), AutoSize = true };
             cardSecurity.ContentPanel.Controls.Add(lblPwd);
 
             txtPassword = new TextEdit
             {
-                Location = new Point(14, 30),
-                Size = new Size(cardWidth - 50, 32),
+                Location = new Point(14, 26),
+                Size = new Size(788, 32),
                 UseSystemPasswordChar = true,
                 ShowPasswordEyeButton = true,
                 PlaceholderText = "Để trống nếu không mã hóa, hoặc nhập mật khẩu an toàn..."
@@ -340,7 +338,7 @@ namespace ZeroZip.Main
             cardSecurity.ContentPanel.Controls.Add(txtPassword);
 
             pnlContainer.Controls.Add(cardSecurity);
-            currentY += 95;
+            currentY += 146;
 
             // --- Card 4: Tiến trình & Điều khiển ---
             var cardExec = new Card
@@ -348,15 +346,15 @@ namespace ZeroZip.Main
                 Title = "4. Tiến Trình Thực Thi & Thao Tác",
                 Subtitle = "Bắt đầu nén hoặc ước tính nhanh tỷ lệ",
                 StepNumber = 4,
-                Size = new Size(cardWidth, 160),
+                Size = new Size(cardWidth, 180),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             progressBar = new ProgressBarControl
             {
-                Location = new Point(14, 10),
-                Size = new Size(cardWidth - 50, 22),
+                Location = new Point(14, 8),
+                Size = new Size(788, 22),
                 ShowPercentage = true
             };
             cardExec.ContentPanel.Controls.Add(progressBar);
@@ -364,8 +362,8 @@ namespace ZeroZip.Main
             lblStatus = new Label
             {
                 Text = "Sẵn sàng nhận lệnh.",
-                Location = new Point(14, 36),
-                Size = new Size(cardWidth - 50, 24),
+                Location = new Point(14, 34),
+                Size = new Size(788, 22),
                 ForeColor = ZeroTheme.Colors.Primary
             };
             cardExec.ContentPanel.Controls.Add(lblStatus);
@@ -375,8 +373,8 @@ namespace ZeroZip.Main
             {
                 Text = "⚡ Bắt đầu Siêu Nén",
                 ButtonStyle = ZeroButtonStyle.Primary,
-                Location = new Point(14, 68),
-                Size = new Size(185, 42)
+                Location = new Point(14, 62),
+                Size = new Size(185, 40)
             };
             btnCompress.Click += BtnCompress_Click;
             cardExec.ContentPanel.Controls.Add(btnCompress);
@@ -385,8 +383,8 @@ namespace ZeroZip.Main
             {
                 Text = "🔍 Ước tính tỷ lệ",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(209, 68),
-                Size = new Size(160, 42)
+                Location = new Point(209, 62),
+                Size = new Size(155, 40)
             };
             btnEstimate.Click += BtnEstimate_Click;
             cardExec.ContentPanel.Controls.Add(btnEstimate);
@@ -395,8 +393,8 @@ namespace ZeroZip.Main
             {
                 Text = "✕ Hủy",
                 ButtonStyle = ZeroButtonStyle.Danger,
-                Location = new Point(379, 68),
-                Size = new Size(95, 42),
+                Location = new Point(374, 62),
+                Size = new Size(90, 40),
                 Enabled = false
             };
             btnCancel.Click += (s, e) =>
@@ -411,45 +409,47 @@ namespace ZeroZip.Main
             {
                 Text = ShellContextMenuService.IsRegistered() ? "✓ Đã tích hợp Explorer" : "⚙ Menu Chuột Phải Explorer",
                 ButtonStyle = ZeroButtonStyle.Ghost,
-                Location = new Point(484, 68),
-                Size = new Size(210, 42)
+                Location = new Point(474, 62),
+                Size = new Size(210, 40)
             };
             btnContextMenu.Click += BtnContextMenu_Click;
             cardExec.ContentPanel.Controls.Add(btnContextMenu);
 
             pnlContainer.Controls.Add(cardExec);
+            currentY += 188;
+
+            // Ensure scrolling range accommodates all cards with breathing space
+            pnlContainer.AutoScrollMinSize = new Size(0, currentY + 15);
         }
 
         private void BuildInspectorTab(TabPageEx page)
         {
-            page.AutoScroll = true;
-
             var pnlContainer = new Panel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                Padding = new Padding(12)
+                Padding = new Padding(10)
             };
             page.Controls.Add(pnlContainer);
 
-            const int cardWidth = 820;
+            const int cardWidth = 840;
 
             // Card 1: Chọn tệp cần kiểm tra
             var cardInspectSource = new Card
             {
                 Title = "Phân Tích Cấu Trúc Header & Metadata (ZTAR / SFX)",
                 Subtitle = "Kiểm tra thông tin chi tiết payload, thuật toán, mã hóa và CRC32 mà không cần trích xuất",
-                Size = new Size(cardWidth, 110),
-                Location = new Point(10, 10),
+                Size = new Size(cardWidth, 138),
+                Location = new Point(10, 8),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblIns = new Label { Text = "Chọn tệp cần kiểm tra (.exe SFX / .ztar):", Location = new Point(14, 10), AutoSize = true };
+            var lblIns = new Label { Text = "Chọn tệp cần kiểm tra (.exe SFX / .ztar):", Location = new Point(14, 6), AutoSize = true };
             cardInspectSource.ContentPanel.Controls.Add(lblIns);
 
             txtInspectFile = new ButtonEdit
             {
-                Location = new Point(14, 30),
+                Location = new Point(14, 26),
                 Size = new Size(480, 32),
                 PlaceholderText = "Chọn tệp .exe SFX hoặc .ztar cần kiểm tra..."
             };
@@ -460,7 +460,7 @@ namespace ZeroZip.Main
             {
                 Text = "Chọn tệp...",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(502, 30),
+                Location = new Point(502, 26),
                 Size = new Size(95, 32)
             };
             btnBrowseInspect.Click += (s, e) => BrowseInspectFile();
@@ -470,7 +470,7 @@ namespace ZeroZip.Main
             {
                 Text = "🔍 Phân tích",
                 ButtonStyle = ZeroButtonStyle.Primary,
-                Location = new Point(605, 30),
+                Location = new Point(605, 26),
                 Size = new Size(95, 32)
             };
             btnRunInspect.Click += (s, e) => RunInspect();
@@ -480,7 +480,7 @@ namespace ZeroZip.Main
             {
                 Text = "📦 Giải nén...",
                 ButtonStyle = ZeroButtonStyle.Success,
-                Location = new Point(708, 30),
+                Location = new Point(708, 26),
                 Size = new Size(95, 32),
                 Enabled = false
             };
@@ -494,8 +494,8 @@ namespace ZeroZip.Main
             {
                 Title = "Thông Tin Chi Tiết Gói Nén (Archive Metadata)",
                 Subtitle = "Nhật ký kiểm tra và phân tích cấu trúc nhị phân",
-                Size = new Size(cardWidth, 420),
-                Location = new Point(10, 130),
+                Size = new Size(cardWidth, 480),
+                Location = new Point(10, 154),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -506,6 +506,7 @@ namespace ZeroZip.Main
             cardInspectResult.ContentPanel.Controls.Add(lstInspectDetails);
 
             pnlContainer.Controls.Add(cardInspectResult);
+            pnlContainer.AutoScrollMinSize = new Size(0, 650);
         }
 
         #region Drag & Drop Support
