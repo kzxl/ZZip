@@ -18,13 +18,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroZip.Core\ZeroZip.Core.csproj" />
-    <ProjectReference Include="..\..\..\ZeroPlatform\ZeroUI\src\ZeroUI.Core\ZeroUI.Core.csproj" />
-    <ProjectReference Include="..\..\..\ZeroPlatform\ZeroUI\src\ZeroUI.WinForms\ZeroUI.WinForms.csproj" />
     <!-- Build dependency only: we publish the stub ourselves, don't reference its assembly. -->
     <ProjectReference Include="..\ZeroZip.Stub\ZeroZip.Stub.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
     </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZeroUI.Core" Version="1.8.0" />
+    <PackageReference Include="ZeroUI.WinForms" Version="1.8.0" />
   </ItemGroup>
 
   <!--

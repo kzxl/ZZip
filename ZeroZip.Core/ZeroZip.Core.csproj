@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\ZeroPlatform\ZeroCompression\src\ZeroCompression.Core\ZeroCompression.Core.csproj" />
+    <PackageReference Include="ZeroCompression.Core" Version="1.0.0" />
   </ItemGroup>
 
 </Project>
