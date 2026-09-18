@@ -33,7 +33,7 @@ namespace ZeroZip.Tests
                         expectedCrc: fakeCrc);
                 });
 
-                Assert.Contains("CRC32 không khớp", ex.Message);
+                Assert.Contains("CRC32 mismatch", ex.Message);
             }
         }
 

@@ -40,7 +40,7 @@ namespace ZeroZip.Core
             bool precomp = options.UsePrecomp;
             string? precompExe = precomp ? PrecompService.Locate(options.PrecompPath) : null;
             if (precomp && precompExe == null)
-                throw new FileNotFoundException("Bật nén sâu nhưng không tìm thấy precomp.exe.");
+                throw new FileNotFoundException("Precomp deep compression is enabled, but precomp.exe was not found.");
 
             var crcCounter = new ObservableStream(destination, computeCrc: true, leaveOpen: true);
             Stream encLayer = options.IsEncrypted
@@ -166,7 +166,7 @@ namespace ZeroZip.Core
                 if (expectedCrc.HasValue && crcMeter.Crc != expectedCrc.Value)
                 {
                     throw new InvalidDataException(
-                        $"Dữ liệu nén bị hỏng (CRC32 không khớp: nhận 0x{crcMeter.Crc:X8}, mong đợi 0x{expectedCrc.Value:X8}). Tệp có thể bị lỗi khi tải về.");
+                        $"Compressed payload is corrupted (CRC32 mismatch: received 0x{crcMeter.Crc:X8}, expected 0x{expectedCrc.Value:X8}). Archive may be corrupted.");
                 }
             }
             finally
@@ -219,7 +219,7 @@ namespace ZeroZip.Core
             {
                 int want = (int)Math.Min(buf.Length, remaining);
                 int n = src.Read(buf, 0, want);
-                if (n == 0) throw new EndOfStreamException("Container precomp bị cắt cụt.");
+                if (n == 0) throw new EndOfStreamException("Precomp container is truncated.");
                 dst.Write(buf, 0, n);
                 remaining -= n;
             }
@@ -241,7 +241,7 @@ namespace ZeroZip.Core
             while (read < count)
             {
                 int n = s.Read(buf, read, count - read);
-                if (n == 0) throw new EndOfStreamException("Dữ liệu bị cắt cụt.");
+                if (n == 0) throw new EndOfStreamException("Data is truncated.");
                 read += n;
             }
             return buf;

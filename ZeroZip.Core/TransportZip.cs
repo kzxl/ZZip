@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -20,7 +20,7 @@ namespace ZeroZip.Core
         public static string[] Wrap(string sfxExePath, string zipPath)
         {
             if (!File.Exists(sfxExePath))
-                throw new FileNotFoundException("Không tìm thấy tệp SFX để bọc.", sfxExePath);
+                throw new FileNotFoundException("SFX executable file not found for wrapping.", sfxExePath);
 
             string dir = Path.GetDirectoryName(Path.GetFullPath(sfxExePath)) ?? ".";
             string baseName = Path.GetFileNameWithoutExtension(sfxExePath);

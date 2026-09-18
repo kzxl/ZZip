@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 
@@ -65,7 +65,7 @@ namespace ZeroZip.Core
             string args = $"-cn {extraArgs} -o\"{outputFile}\" \"{inputFile}\"";
             Run(precompExe, args, Path.GetDirectoryName(Path.GetFullPath(outputFile))!);
             if (!File.Exists(outputFile))
-                throw new IOException("precomp không tạo được tệp đầu ra (precompress).");
+                throw new IOException("precomp failed to generate output file (precompress).");
         }
 
         /// <summary>Restores a precomp container file back to the original bytes.</summary>
@@ -75,7 +75,7 @@ namespace ZeroZip.Core
             string args = $"-r -o\"{outputFile}\" \"{inputFile}\"";
             Run(precompExe, args, Path.GetDirectoryName(Path.GetFullPath(outputFile))!);
             if (!File.Exists(outputFile))
-                throw new IOException("precomp không phục hồi được dữ liệu (restore).");
+                throw new IOException("precomp failed to restore data (restore).");
         }
 
         private static void Run(string exe, string args, string workingDir)
@@ -92,14 +92,14 @@ namespace ZeroZip.Core
             };
 
             using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException("Không khởi chạy được precomp.");
+                ?? throw new InvalidOperationException("Failed to launch precomp executable.");
             // Drain pipes to avoid deadlock on large output.
             string stderr = process.StandardError.ReadToEnd();
             process.StandardOutput.ReadToEnd();
             process.WaitForExit();
 
             if (process.ExitCode != 0)
-                throw new Exception($"precomp lỗi (mã {process.ExitCode}): {stderr}");
+                throw new Exception($"precomp failed (exit code {process.ExitCode}): {stderr}");
         }
     }
 }
