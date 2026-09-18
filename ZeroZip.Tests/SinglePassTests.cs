@@ -60,5 +60,17 @@ namespace ZeroZip.Tests
                 Assert.False(PayloadCrypto.CheckPassword(fs, "WrongPassword"));
             }
         }
+
+        [Fact]
+        public void Adaptive_AutoDetect_RoutesCorrectly()
+        {
+            using var ws = new TempWorkspace();
+            string jsonFile = ws.At("data.json");
+            File.WriteAllText(jsonFile, "{\"name\":\"test\",\"version\":1.0,\"items\":[1,2,3],\"key\":\"val\"}");
+
+            var opt = CompressionOptions.AutoDetect(jsonFile);
+            Assert.Equal(CompressionMethod.Zstd, opt.Method);
+            Assert.True(opt.LongDistanceMatching);
+        }
     }
 }

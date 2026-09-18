@@ -248,6 +248,7 @@ namespace ZeroZip.Main
                 Location = new Point(14, 30),
                 Size = new Size(250, 32)
             };
+            cmbMethod.Items.Add("⭐ Tự động nhận diện (Adaptive Auto-Detect)");
             cmbMethod.Items.Add("Zstandard (nhanh, đa luồng, giải nén GB/s)");
             cmbMethod.Items.Add("LZMA (nén sâu nhất, chuẩn đóng gói)");
             cmbMethod.Items.Add("Brotli (nén text/web/json)");
@@ -592,10 +593,10 @@ namespace ZeroZip.Main
 
         private CompressionMethod SelectedMethod() => cmbMethod.SelectedIndex switch
         {
-            1 => CompressionMethod.Lzma,
-            2 => CompressionMethod.Brotli,
-            3 => CompressionMethod.Store,
-            4 => CompressionMethod.ZeroTelemetry,
+            2 => CompressionMethod.Lzma,
+            3 => CompressionMethod.Brotli,
+            4 => CompressionMethod.Store,
+            5 => CompressionMethod.ZeroTelemetry,
             _ => CompressionMethod.Zstd,
         };
 
@@ -616,19 +617,25 @@ namespace ZeroZip.Main
 
             btnEstimate.Enabled = false;
             string src = txtSource.Text;
-            lblStatus.Text = "Đang lấy mẫu và ước tính...";
-            var overlay = ShowLoading("Đang phân tích", "Đang lấy mẫu dữ liệu và ước tính tỷ lệ nén...");
+            lblStatus.Text = "Đang lấy mẫu và phân tích dữ liệu...";
+            var overlay = ShowLoading("Đang phân tích", "Đang phân tích dữ liệu và nhận diện loại payload...");
 
             try
             {
-                var est = await Task.Run(() => _sfxService.Estimate(src));
-                lblStatus.Text = est.Summary();
-                ShowToast(est.Summary(), "Kết quả ước tính", ToastType.Success);
+                var estTask = Task.Run(() => _sfxService.Estimate(src));
+                var classifyTask = Task.Run(() => ZeroCompression.Core.Analysis.DataClassifier.ClassifyPath(src));
+                await Task.WhenAll(estTask, classifyTask);
+
+                var est = estTask.Result;
+                var cls = classifyTask.Result;
+
+                lblStatus.Text = $"[{cls.DetectedType}] -> {cls.RecommendedMethod} | {est.Summary()}";
+                ShowToast($"Nhận diện: {cls.DetectedType} -> Khuyến nghị: {cls.RecommendedMethod}\n{est.Summary()}", "Nhận diện & Ước tính", ToastType.Info);
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "Lỗi ước tính: " + ex.Message;
-                ShowToast(ex.Message, "Lỗi ước tính", ToastType.Error);
+                lblStatus.Text = "Lỗi phân tích: " + ex.Message;
+                ShowToast(ex.Message, "Lỗi phân tích", ToastType.Error);
             }
             finally
             {
@@ -657,13 +664,24 @@ namespace ZeroZip.Main
             if (cmbSplitMode.SelectedIndex == 1) splitSize = 2L * 1024 * 1024 * 1024; // 2GB
             if (cmbSplitMode.SelectedIndex == 2) splitSize = 4L * 1024 * 1024 * 1024; // 4GB
 
-            var method = SelectedMethod();
             var profile = SelectedProfile();
             string? password = string.IsNullOrEmpty(txtPassword.Text) ? null : txtPassword.Text;
             bool wrapZip = chkWrapZip.Checked;
             bool usePrecomp = chkPrecomp.Checked;
             bool longMode = chkLong.Checked;
-            lblStatus.Text = $"Đang nén [{method} / {profile}{(usePrecomp ? " / precomp" : "")}]. Vui lòng đợi...";
+
+            bool isAuto = cmbMethod.SelectedIndex == 0;
+            ZeroCompression.Core.Analysis.DataClassificationResult? classified = null;
+            if (isAuto)
+            {
+                classified = ZeroCompression.Core.Analysis.DataClassifier.ClassifyPath(source);
+                lblStatus.Text = $"Tự động nhận diện: [{classified.DetectedType}] -> Áp dụng {classified.RecommendedMethod}. Đang nén...";
+            }
+            else
+            {
+                var method = SelectedMethod();
+                lblStatus.Text = $"Đang nén [{method} / {profile}{(usePrecomp ? " / precomp" : "")}]. Vui lòng đợi...";
+            }
 
             var progress = new Progress<long>(done =>
             {
@@ -672,7 +690,16 @@ namespace ZeroZip.Main
 
             try
             {
-                var options = CompressionOptions.FromProfile(profile, method);
+                CompressionOptions options;
+                if (classified != null)
+                {
+                    options = classified.CreateOptions(profile);
+                }
+                else
+                {
+                    options = CompressionOptions.FromProfile(profile, SelectedMethod());
+                }
+
                 options.Password = password;
                 options.UsePrecomp = usePrecomp;
                 if (longMode)
@@ -706,7 +733,11 @@ namespace ZeroZip.Main
                 ModalDialog.Info(
                     this,
                     "Nén Thành Công",
-                    $"Tác vụ hoàn tất!\n\nThuật toán: {method}\nGốc: {FormatSize(result.OriginalSize)}\nSau nén: {FormatSize(result.CompressedSize)}\nTỉ lệ: {result.Ratio:P1}"
+                    $"Tác vụ hoàn tất!\n\n"
+                    + (isAuto ? $"Tự động nhận diện: {classified?.DetectedType}\n" : "")
+                    + $"Thuật toán: {options.Method} (Level {options.Level})\n"
+                    + $"Gốc: {FormatSize(result.OriginalSize)}\nSau nén: {FormatSize(result.CompressedSize)}\nTỉ lệ: {result.Ratio:P1}"
+                    + (classified != null ? $"\nChi tiết: {classified.Reason}" : "")
                     + (password != null ? "\nBảo mật: Đã mã hóa AES-256-GCM." : "") + extra);
             }
             catch (OperationCanceledException)

@@ -53,7 +53,7 @@ internal static class Cli
         string? output = null;
         long splitSize = 0;
         var profile = CompressionProfile.Ultra;
-        var method = CompressionMethod.Zstd;
+        CompressionMethod? method = null; // null = auto-detect
         string? password = null;
         bool wrapZip = false;
         bool usePrecomp = false;
@@ -126,7 +126,19 @@ internal static class Cli
         if (output == null)
             output = (Directory.Exists(source) ? source.TrimEnd('\\', '/') : Path.ChangeExtension(source, null)) + "_SFX.exe";
 
-        var options = CompressionOptions.FromProfile(profile, method);
+        CompressionOptions options;
+        if (method == null)
+        {
+            var classified = ZeroCompression.Core.Analysis.DataClassifier.ClassifyPath(source);
+            options = classified.CreateOptions(profile);
+            Console.WriteLine($"[ZeroZip Auto-Detect] Nhận diện: [{classified.DetectedType}] -> Áp dụng {classified.RecommendedMethod} (Level {options.Level})");
+            Console.WriteLine($"                       Lý do: {classified.Reason}");
+        }
+        else
+        {
+            options = CompressionOptions.FromProfile(profile, method.Value);
+        }
+
         options.Password = password;
         options.UsePrecomp = usePrecomp;
         options.PrecompPath = precompPath;
@@ -406,14 +418,15 @@ Tham số:
         return 0;
     }
 
-    private static CompressionMethod ParseMethod(string text) => text.Trim().ToLowerInvariant() switch
+    private static CompressionMethod? ParseMethod(string text) => text.Trim().ToLowerInvariant() switch
     {
+        "auto" or "adaptive" or "smart" => null,
         "zstd" or "zstandard" or "zst" => CompressionMethod.Zstd,
         "lzma" or "lz" or "xz" => CompressionMethod.Lzma,
         "brotli" or "br" => CompressionMethod.Brotli,
         "store" or "none" or "copy" => CompressionMethod.Store,
         "telemetry" or "ztel" or "gorilla" => CompressionMethod.ZeroTelemetry,
-        _ => throw new ArgumentException($"Thuật toán không hợp lệ: {text} (zstd|lzma|brotli|store|telemetry)"),
+        _ => throw new ArgumentException($"Thuật toán không hợp lệ: {text} (auto|zstd|lzma|brotli|store|telemetry)"),
     };
 
     private static string NextArg(string[] args, ref int i, string flag)
