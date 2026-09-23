@@ -175,6 +175,72 @@ namespace ZeroZip.Core
             }
         }
 
+        /// <summary>
+        /// Decompresses a payload stream and extracts either all files or a specified subset of entries into
+        /// <paramref name="destinationDir"/>.
+        /// </summary>
+        public static void ExtractSelected(Stream compressedSource, string destinationDir, ISet<string>? selectedNames,
+            CompressionMethod method, string? password = null, bool precompressed = false,
+            IProgress<long>? progress = null, int windowLog = 0, CancellationToken cancel = default)
+        {
+            Directory.CreateDirectory(destinationDir);
+
+            Stream decLayer = password != null
+                ? PayloadCrypto.CreateDecryptor(compressedSource, password)
+                : compressedSource;
+            try
+            {
+                using Stream codec = CodecRegistry.WrapDecompress(decLayer, method, windowLog);
+                using var meter = new ObservableStream(codec, computeCrc: false, progress: progress, leaveOpen: true, cancel: cancel);
+
+                if (precompressed)
+                {
+                    string work = Path.Combine(Path.GetTempPath(), "ztar_" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(work);
+                    string tarPath = Path.Combine(work, "data.tar");
+                    try
+                    {
+                        RestorePrecompToTar(meter, tarPath);
+                        using var tarFs = new FileStream(tarPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        ExtractTarEntries(tarFs, destinationDir, selectedNames, cancel);
+                    }
+                    finally { TryDeleteDir(work); }
+                }
+                else
+                {
+                    ExtractTarEntries(meter, destinationDir, selectedNames, cancel);
+                }
+            }
+            finally
+            {
+                if (password != null) decLayer.Dispose();
+            }
+        }
+
+        private static void ExtractTarEntries(Stream tarStream, string destinationDir, ISet<string>? selectedNames, CancellationToken cancel)
+        {
+            using var reader = new TarReader(tarStream, leaveOpen: true);
+            TarEntry? entry;
+            while ((entry = reader.GetNextEntry()) != null)
+            {
+                cancel.ThrowIfCancellationRequested();
+                if (selectedNames == null || selectedNames.Contains(entry.Name) || selectedNames.Any(s => entry.Name.StartsWith(s.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)))
+                {
+                    string fullPath = Path.Combine(destinationDir, entry.Name);
+                    if (entry.EntryType is TarEntryType.Directory)
+                    {
+                        Directory.CreateDirectory(fullPath);
+                    }
+                    else
+                    {
+                        string? dir = Path.GetDirectoryName(fullPath);
+                        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                        entry.ExtractToFile(fullPath, overwrite: true);
+                    }
+                }
+            }
+        }
+
         private static void RestorePrecompContainer(Stream containerStream, string destinationDir)
         {
             string work = Path.Combine(Path.GetTempPath(), "ztar_" + Guid.NewGuid().ToString("N"));
@@ -346,7 +412,7 @@ namespace ZeroZip.Core
             while ((entry = reader.GetNextEntry()) != null)
             {
                 bool isDir = entry.EntryType is TarEntryType.Directory;
-                entries.Add(new ArchiveEntry(entry.Name, isDir ? -1 : entry.Length, isDir));
+                entries.Add(new ArchiveEntry(entry.Name, isDir ? -1 : entry.Length, isDir, entry.ModificationTime));
             }
             return entries;
         }
@@ -365,5 +431,5 @@ namespace ZeroZip.Core
         public double Ratio => OriginalSize > 0 ? (double)CompressedSize / OriginalSize : 0;
     }
 
-    public readonly record struct ArchiveEntry(string Name, long Size, bool IsDirectory);
+    public readonly record struct ArchiveEntry(string Name, long Size, bool IsDirectory, DateTimeOffset ModificationTime = default);
 }

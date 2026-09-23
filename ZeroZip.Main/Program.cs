@@ -1,5 +1,8 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using ZeroCompression.Core;
 using ZeroZip.Core;
 using ZeroZip.Main.Services;
 
@@ -13,10 +16,6 @@ static class Program
 
     private const int ATTACH_PARENT_PROCESS = -1;
 
-    /// <summary>
-    /// Entry point. With no arguments the WinForms GUI launches; with arguments the app
-    /// runs as a console-style CLI by attaching to the parent console.
-    /// </summary>
     [STAThread]
     static int Main(string[] args)
     {
@@ -27,10 +26,114 @@ static class Program
             return 0;
         }
 
+        string first = args[0];
+
+        // 1. GUI Progress Mode: Compression
+        if (first.Equals("--gui-compress", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
+        {
+            ApplicationConfiguration.Initialize();
+            string source = args[1];
+            long split = 0;
+            for (int i = 2; i < args.Length; i++)
+            {
+                if (args[i].Equals("--split", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    split = ParseSize(args[++i]);
+                }
+            }
+
+            long totalBytes = 0;
+            if (File.Exists(source)) totalBytes = new FileInfo(source).Length;
+            else if (Directory.Exists(source))
+            {
+                foreach (var f in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+                {
+                    try { totalBytes += new FileInfo(f).Length; } catch { }
+                }
+            }
+
+            var dialog = new OperationProgressDialog(OperationType.Compress, source, null, null, null, totalBytes);
+            Application.Run(dialog);
+            return dialog.IsCompleted ? 0 : 1;
+        }
+
+        // 2. GUI Progress Mode: Extraction
+        if (first.Equals("--gui-extract", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
+        {
+            ApplicationConfiguration.Initialize();
+            string source = args[1];
+            bool toFolder = false;
+            for (int i = 2; i < args.Length; i++)
+            {
+                if (args[i].Equals("--to-folder", StringComparison.OrdinalIgnoreCase))
+                    toFolder = true;
+            }
+
+            string? destDir = toFolder
+                ? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".", Path.GetFileNameWithoutExtension(source))
+                : null;
+
+            long totalBytes = 0;
+            try
+            {
+                var f = SfxComposer.ReadFooter(source);
+                if (f != null) totalBytes = f.OriginalSize;
+            }
+            catch { }
+
+            var dialog = new OperationProgressDialog(OperationType.Extract, source, destDir, null, null, totalBytes);
+            Application.Run(dialog);
+            return dialog.IsCompleted ? 0 : 1;
+        }
+
+        // 3. GUI Progress Mode: Test Archive
+        if (first.Equals("--gui-test", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
+        {
+            ApplicationConfiguration.Initialize();
+            string source = args[1];
+            long totalBytes = 0;
+            try
+            {
+                var f = SfxComposer.ReadFooter(source);
+                if (f != null) totalBytes = f.PayloadSize;
+            }
+            catch { }
+
+            var dialog = new OperationProgressDialog(OperationType.Test, source, null, null, null, totalBytes);
+            Application.Run(dialog);
+            return dialog.IsCompleted ? 0 : 1;
+        }
+
+        // 4. GUI Studio Mode
+        if (first.Equals("--studio", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
+        {
+            ApplicationConfiguration.Initialize();
+            Application.Run(new Form1(initialSourcePath: args[1], openStudio: true));
+            return 0;
+        }
+
+        // 5. Open single file directly in Archive Explorer (like WinRAR double click on archive)
+        if (args.Length == 1 && (File.Exists(first) || Directory.Exists(first)))
+        {
+            ApplicationConfiguration.Initialize();
+            if (File.Exists(first) && (first.EndsWith(".ztar", StringComparison.OrdinalIgnoreCase) ||
+                                       first.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                                       first.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)))
+            {
+                Application.Run(new Form1(initialArchivePath: first));
+            }
+            else
+            {
+                Application.Run(new Form1(initialSourcePath: first, openStudio: true));
+            }
+            return 0;
+        }
+
+        // 6. Console CLI Mode
         AttachConsole(ATTACH_PARENT_PROCESS);
         try
         {
-            try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { /* ignore on redirected handles */ }
+            try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { }
             return Cli.Run(args);
         }
         catch (Exception ex)
@@ -38,5 +141,17 @@ static class Program
             Console.Error.WriteLine("Lỗi: " + ex.Message);
             return 1;
         }
+    }
+
+    private static long ParseSize(string s)
+    {
+        s = s.Trim().ToUpperInvariant();
+        long mul = 1;
+        if (s.EndsWith("GB") || s.EndsWith("G")) mul = 1024L * 1024 * 1024;
+        else if (s.EndsWith("MB") || s.EndsWith("M")) mul = 1024L * 1024;
+        else if (s.EndsWith("KB") || s.EndsWith("K")) mul = 1024L;
+
+        string num = s.TrimEnd('G', 'B', 'M', 'K');
+        return double.TryParse(num, out double val) ? (long)(val * mul) : 0;
     }
 }
