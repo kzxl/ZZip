@@ -373,6 +373,62 @@ namespace ZeroZip.Main
             lvArchiveFiles.DoubleClick += LvArchiveFiles_DoubleClick;
             lvArchiveFiles.SelectedIndexChanged += LvArchiveFiles_SelectedIndexChanged;
 
+            // Handle Right-Click to select item under mouse (Critical WinForms fix)
+            lvArchiveFiles.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Right)
+                {
+                    var hitItem = lvArchiveFiles.GetItemAt(e.X, e.Y);
+                    if (hitItem != null)
+                    {
+                        if (!hitItem.Selected)
+                        {
+                            lvArchiveFiles.SelectedItems.Clear();
+                            hitItem.Selected = true;
+                            hitItem.Focused = true;
+                        }
+                    }
+                    else
+                    {
+                        lvArchiveFiles.SelectedItems.Clear();
+                    }
+                }
+            };
+
+            // Keyboard navigation (WinRAR style)
+            lvArchiveFiles.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (lvArchiveFiles.SelectedItems.Count > 0)
+                    {
+                        LvArchiveFiles_DoubleClick(lvArchiveFiles, EventArgs.Empty);
+                    }
+                }
+                else if (e.KeyCode == Keys.Back)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (_archiveExplorer.NavigateUp())
+                    {
+                        RefreshFileListView();
+                    }
+                }
+                else if (e.KeyCode == Keys.F5)
+                {
+                    e.Handled = true;
+                    RefreshFileListView();
+                }
+                else if (e.Control && e.KeyCode == Keys.A)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    foreach (ListViewItem it in lvArchiveFiles.Items) it.Selected = true;
+                }
+            };
+
             // In-app Context Menu
             BuildContextMenu();
             lvArchiveFiles.ContextMenuStrip = contextMenuFiles;
@@ -425,7 +481,47 @@ namespace ZeroZip.Main
             var itemCopy = new ToolStripMenuItem("📋 Sao chép đường dẫn (Copy Path)", null, (s, e) => CopySelectedPath());
             var itemInfo = new ToolStripMenuItem("ℹ️ Thuộc tính tệp (Properties)", null, (s, e) => ShowSelectedFileInfo());
 
-            contextMenuFiles.Items.AddRange(new ToolStripItem[] { itemOpen, itemExtract, new ToolStripSeparator(), itemCopy, itemInfo });
+            var sep1 = new ToolStripSeparator();
+            var itemOpenAnother = new ToolStripMenuItem("📂 Mở gói nén khác...", null, (s, e) => BrowseAndOpenArchive());
+            var itemTest = new ToolStripMenuItem("🧪 Kiểm tra toàn vẹn gói nén", null, (s, e) => TbBtnTest_Click(s, e));
+            var itemRefresh = new ToolStripMenuItem("🔄 Làm mới danh sách (F5)", null, (s, e) => RefreshFileListView());
+            var itemSelectAll = new ToolStripMenuItem("☑️ Chọn tất cả (Ctrl+A)", null, (s, e) =>
+            {
+                foreach (ListViewItem it in lvArchiveFiles.Items) it.Selected = true;
+            });
+
+            contextMenuFiles.Items.AddRange(new ToolStripItem[]
+            {
+                itemOpen,
+                itemExtract,
+                new ToolStripSeparator(),
+                itemCopy,
+                itemInfo,
+                sep1,
+                itemOpenAnother,
+                itemTest,
+                itemRefresh,
+                itemSelectAll
+            });
+
+            contextMenuFiles.Opening += (s, e) =>
+            {
+                bool hasSelection = lvArchiveFiles.SelectedItems.Count > 0;
+                bool hasArchive = !string.IsNullOrEmpty(_archiveExplorer.CurrentArchivePath);
+
+                var firstSel = hasSelection ? lvArchiveFiles.SelectedItems[0].Tag as VirtualItem : null;
+                bool isDir = firstSel != null && firstSel.IsDirectory;
+
+                itemOpen.Visible = hasSelection;
+                itemOpen.Text = isDir ? "📁 Mở thư mục này" : "👁️ Mở / Xem tệp (Open/View)";
+                itemExtract.Visible = hasSelection;
+                itemCopy.Visible = hasSelection;
+                itemInfo.Visible = hasSelection;
+                sep1.Visible = hasSelection;
+
+                itemTest.Enabled = hasArchive;
+                itemRefresh.Enabled = hasArchive;
+            };
         }
 
         private async void BrowseAndOpenArchive()
