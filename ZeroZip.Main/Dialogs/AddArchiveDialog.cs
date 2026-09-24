@@ -76,8 +76,8 @@ namespace ZeroZip.Main.Dialogs
         private void InitializeComponent()
         {
             this.Text = LocalizationService.Get("Dialog_AddArchive_Title");
-            this.Size = new Size(820, 750);
-            this.MinimumSize = new Size(760, 640);
+            this.Size = new Size(840, 800);
+            this.MinimumSize = new Size(780, 650);
             this.StartPosition = FormStartPosition.CenterParent;
             this.MaximizeBox = false;
 
@@ -87,10 +87,9 @@ namespace ZeroZip.Main.Dialogs
                 AutoScroll = true,
                 Padding = new Padding(12)
             };
-            this.Controls.Add(pnlScroll);
 
-            int currentY = 8;
-            const int cardWidth = 770;
+            int currentY = 10;
+            const int cardWidth = 790;
 
             // --- Card 1: Nguồn & Tệp đích ---
             cardSource = new Card
@@ -98,6 +97,7 @@ namespace ZeroZip.Main.Dialogs
                 Title = LocalizationService.Get("Studio_Card1_Title"),
                 Subtitle = LocalizationService.Get("Studio_Card1_Sub"),
                 StepNumber = 1,
+                AutoFitContent = false,
                 Size = new Size(cardWidth, 195),
                 Location = new Point(12, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
@@ -109,7 +109,7 @@ namespace ZeroZip.Main.Dialogs
             txtSource = new ButtonEdit
             {
                 Location = new Point(14, 26),
-                Size = new Size(505, 32),
+                Size = new Size(525, 32),
                 PlaceholderText = "Chọn hoặc kéo thả thư mục / tệp cần nén..."
             };
             txtSource.ButtonClick += (s, e) => BrowseSourceFolder();
@@ -120,7 +120,7 @@ namespace ZeroZip.Main.Dialogs
             {
                 Text = LocalizationService.Get("Studio_BtnBrowseFolder"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(525, 26),
+                Location = new Point(545, 26),
                 Size = new Size(115, 32)
             };
             btnBrowseFolder.Click += (s, e) => BrowseSourceFolder();
@@ -130,7 +130,7 @@ namespace ZeroZip.Main.Dialogs
             {
                 Text = LocalizationService.Get("Studio_BtnBrowseFile"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(646, 26),
+                Location = new Point(666, 26),
                 Size = new Size(105, 32)
             };
             btnBrowseFile.Click += (s, e) => BrowseSourceFile();
@@ -142,7 +142,7 @@ namespace ZeroZip.Main.Dialogs
             txtDest = new ButtonEdit
             {
                 Location = new Point(14, 86),
-                Size = new Size(616, 32),
+                Size = new Size(645, 32),
                 PlaceholderText = "Đường dẫn kho lưu trữ (.zz, .zip hoặc .exe SFX)..."
             };
             txtDest.ButtonClick += (s, e) => BrowseDest();
@@ -152,14 +152,13 @@ namespace ZeroZip.Main.Dialogs
             {
                 Text = LocalizationService.Get("Studio_BtnBrowseDest"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(636, 86),
-                Size = new Size(115, 32)
+                Location = new Point(666, 86),
+                Size = new Size(105, 32)
             };
             btnBrowseDest.Click += (s, e) => BrowseDest();
             cardSource.ContentPanel.Controls.Add(btnBrowseDest);
 
             pnlScroll.Controls.Add(cardSource);
-            currentY += 205;
 
             // --- Card 2: Thuật toán & Cấu hình nén ZeroUniverse ---
             cardEngine = new Card
@@ -167,8 +166,9 @@ namespace ZeroZip.Main.Dialogs
                 Title = LocalizationService.Get("Studio_Card2_Title"),
                 Subtitle = LocalizationService.Get("Studio_Card2_Sub"),
                 StepNumber = 2,
-                Size = new Size(cardWidth, 185),
-                Location = new Point(12, currentY),
+                AutoFitContent = false,
+                Size = new Size(cardWidth, 248),
+                Location = new Point(12, 215),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -203,13 +203,13 @@ namespace ZeroZip.Main.Dialogs
             cmbProfile.SelectedIndex = 2;
             cardEngine.ContentPanel.Controls.Add(cmbProfile);
 
-            var lblSplit = new Label { Text = LocalizationService.Get("Studio_LblSplit"), Location = new Point(480, 6), AutoSize = true };
+            var lblSplit = new Label { Text = LocalizationService.Get("Studio_LblSplit"), Location = new Point(475, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblSplit);
 
             cmbSplit = new ComboBoxEdit
             {
-                Location = new Point(480, 26),
-                Size = new Size(275, 32)
+                Location = new Point(475, 26),
+                Size = new Size(295, 32)
             };
             cmbSplit.Items.Add("Nhúng trực tiếp (1 tệp)");
             cmbSplit.Items.Add("Cắt mảnh 2GB (FAT32 an toàn)");
@@ -217,44 +217,65 @@ namespace ZeroZip.Main.Dialogs
             cmbSplit.SelectedIndex = 0;
             cardEngine.ContentPanel.Controls.Add(cmbSplit);
 
+            // Row 2a: Checkboxes 1 & 2 (Clean 2-row layout prevents text truncation)
             chkWrapZip = new CheckEdit
             {
                 Text = "Bọc ZIP bảo vệ (gửi qua mail/web)",
                 Location = new Point(14, 68),
-                Size = new Size(240, 24)
+                Size = new Size(345, 24)
             };
             cardEngine.ContentPanel.Controls.Add(chkWrapZip);
 
             bool precompOk = _sfxService.IsPrecompAvailable();
             chkPrecomp = new CheckEdit
             {
-                Text = precompOk ? "Nén sâu repack (precomp)" : "Nén repack (chưa có precomp.exe)",
-                Location = new Point(265, 68),
-                Size = new Size(230, 24),
+                Text = precompOk ? "Nén sâu repack (precomp cho ảnh/game)" : "Nén repack (chưa có precomp.exe)",
+                Location = new Point(370, 68),
+                Size = new Size(390, 24),
                 Enabled = precompOk
             };
             cardEngine.ContentPanel.Controls.Add(chkPrecomp);
 
+            // Row 2b: Checkbox 3
             chkLong = new CheckEdit
             {
-                Text = "Khử trùng lặp khoảng cách xa (LDM 2GB)",
-                Location = new Point(505, 68),
-                Size = new Size(250, 24)
+                Text = "Khử trùng lặp khoảng cách xa (Zstd LDM 2GB)",
+                Location = new Point(14, 96),
+                Size = new Size(420, 24)
             };
             cardEngine.ContentPanel.Controls.Add(chkLong);
 
+            // Row 3: Elegant styled recommendation banner
+            var pnlBadge = new Panel
+            {
+                Location = new Point(14, 126),
+                Size = new Size(cardWidth - 45, 46),
+                BackColor = ZeroTheme.IsDark ? Color.FromArgb(30, 38, 54) : Color.FromArgb(242, 246, 255),
+                Padding = new Padding(10, 4, 10, 4),
+                Margin = new Padding(0, 0, 0, 16),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            ZeroTheme.ThemeChanged += (s, e) =>
+            {
+                if (!pnlBadge.IsDisposed)
+                {
+                    pnlBadge.BackColor = ZeroTheme.IsDark ? Color.FromArgb(30, 38, 54) : Color.FromArgb(242, 246, 255);
+                }
+            };
+
             lblAutoDetectBadge = new Label
             {
-                Text = "Chưa nạp dữ liệu phân tích.",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
-                ForeColor = ZeroTheme.Colors.TextSecondary,
-                Location = new Point(14, 102),
-                AutoSize = true
+                Dock = DockStyle.Fill,
+                Text = "💡 Chưa nạp dữ liệu phân tích.",
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                ForeColor = ZeroTheme.Colors.Primary,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
             };
-            cardEngine.ContentPanel.Controls.Add(lblAutoDetectBadge);
+            pnlBadge.Controls.Add(lblAutoDetectBadge);
+            cardEngine.ContentPanel.Controls.Add(pnlBadge);
 
             pnlScroll.Controls.Add(cardEngine);
-            currentY += 195;
 
             // --- Card 3: Bảo mật & Mã hóa ---
             cardSecurity = new Card
@@ -262,8 +283,9 @@ namespace ZeroZip.Main.Dialogs
                 Title = LocalizationService.Get("Studio_Card3_Title"),
                 Subtitle = LocalizationService.Get("Studio_Card3_Sub"),
                 StepNumber = 3,
-                Size = new Size(cardWidth, 120),
-                Location = new Point(12, currentY),
+                AutoFitContent = false,
+                Size = new Size(cardWidth, 185),
+                Location = new Point(12, 473),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -273,7 +295,7 @@ namespace ZeroZip.Main.Dialogs
             txtPassword = new TextEdit
             {
                 Location = new Point(14, 26),
-                Size = new Size(480, 32),
+                Size = new Size(500, 32),
                 PlaceholderText = "Mật khẩu mã hóa (tùy chọn)...",
                 UseSystemPasswordChar = true,
                 ShowPasswordEyeButton = true
@@ -282,16 +304,18 @@ namespace ZeroZip.Main.Dialogs
 
             var lblCryptoNotice = new Label
             {
-                Text = "🔒 Mã hóa có xác thực chuẩn quân sự AES-256-GCM AEAD.",
-                Font = new Font("Segoe UI", 8.25f, FontStyle.Regular),
+                Text = "🔒 Mã hóa có xác thực chuẩn quân sự AES-256-GCM AEAD (Chống giả mạo dữ liệu).",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
                 ForeColor = ZeroTheme.Colors.TextSecondary,
-                Location = new Point(14, 62),
-                AutoSize = true
+                Location = new Point(14, 68),
+                Size = new Size(cardWidth - 45, 22),
+                Margin = new Padding(0, 0, 0, 18),
+                AutoEllipsis = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             cardSecurity.ContentPanel.Controls.Add(lblCryptoNotice);
 
             pnlScroll.Controls.Add(cardSecurity);
-            currentY += 130;
 
             // --- Card 4: Thực thi & Tiến trình ---
             cardAction = new Card
@@ -299,15 +323,16 @@ namespace ZeroZip.Main.Dialogs
                 Title = LocalizationService.Get("Studio_Card4_Title"),
                 Subtitle = LocalizationService.Get("Studio_Card4_Sub"),
                 StepNumber = 4,
-                Size = new Size(cardWidth, 160),
-                Location = new Point(12, currentY),
+                AutoFitContent = false,
+                Size = new Size(cardWidth, 145),
+                Location = new Point(12, 658),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             progressBar = new ProgressBarControl
             {
-                Location = new Point(14, 10),
-                Size = new Size(cardWidth - 45, 16),
+                Location = new Point(14, 12),
+                Size = new Size(cardWidth - 45, 24),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             cardAction.ContentPanel.Controls.Add(progressBar);
@@ -316,39 +341,87 @@ namespace ZeroZip.Main.Dialogs
             {
                 Text = "Sẵn sàng thực hiện.",
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-                Location = new Point(14, 32),
-                Size = new Size(cardWidth - 45, 20),
+                Location = new Point(14, 46),
+                Size = new Size(cardWidth - 45, 22),
+                Margin = new Padding(0, 0, 0, 18),
                 ForeColor = ZeroTheme.Colors.TextSecondary,
+                AutoEllipsis = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             cardAction.ContentPanel.Controls.Add(lblStatus);
+
+            pnlScroll.Controls.Add(cardAction);
+
+            // --- Pinned Bottom Action Bar (WinRAR & 7-Zip Standard) ---
+            var pnlBottomBar = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 60,
+                BackColor = ZeroTheme.Colors.Surface,
+                Padding = new Padding(16, 8, 16, 8)
+            };
+            pnlBottomBar.Paint += (s, e) =>
+            {
+                using var pen = new Pen(ZeroTheme.Colors.Border, 1);
+                e.Graphics.DrawLine(pen, 0, 0, pnlBottomBar.Width, 0);
+            };
+            ZeroTheme.ThemeChanged += (s, e) =>
+            {
+                if (!pnlBottomBar.IsDisposed)
+                {
+                    pnlBottomBar.BackColor = ZeroTheme.Colors.Surface;
+                    pnlBottomBar.Invalidate();
+                }
+            };
+
+            var lblEngineBrand = new Label
+            {
+                Dock = DockStyle.Left,
+                Text = "⚡ Powered by ZeroUniverse Sovereign Codecs",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
+                ForeColor = ZeroTheme.Colors.TextSecondary,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(8, 0, 0, 0),
+                AutoSize = true
+            };
+            pnlBottomBar.Controls.Add(lblEngineBrand);
+
+            var pnlButtons = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0, 4, 8, 4),
+                WrapContents = false
+            };
 
             btnStart = new SimpleButton
             {
                 Text = LocalizationService.Get("Studio_BtnCompress"),
                 ButtonStyle = ZeroButtonStyle.Primary,
-                Location = new Point(14, 58),
-                Size = new Size(170, 38)
+                Size = new Size(170, 38),
+                Margin = new Padding(0, 0, 8, 0)
             };
             btnStart.Click += BtnStart_Click;
-            cardAction.ContentPanel.Controls.Add(btnStart);
+            pnlButtons.Controls.Add(btnStart);
 
             btnEstimate = new SimpleButton
             {
                 Text = LocalizationService.Get("Studio_BtnEstimate"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(194, 58),
-                Size = new Size(150, 38)
+                Size = new Size(150, 38),
+                Margin = new Padding(0, 0, 8, 0)
             };
             btnEstimate.Click += BtnEstimate_Click;
-            cardAction.ContentPanel.Controls.Add(btnEstimate);
+            pnlButtons.Controls.Add(btnEstimate);
 
             btnCancel = new SimpleButton
             {
                 Text = "Đóng",
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(354, 58),
-                Size = new Size(95, 38)
+                Size = new Size(95, 38),
+                Margin = new Padding(0)
             };
             btnCancel.Click += (s, e) =>
             {
@@ -363,12 +436,37 @@ namespace ZeroZip.Main.Dialogs
                     this.Close();
                 }
             };
-            cardAction.ContentPanel.Controls.Add(btnCancel);
+            pnlButtons.Controls.Add(btnCancel);
 
-            pnlScroll.Controls.Add(cardAction);
-            currentY += 170;
+            pnlBottomBar.Controls.Add(pnlButtons);
 
-            pnlScroll.AutoScrollMinSize = new Size(0, currentY + 15);
+            // Correct docking order: Bottom docked control added, then Fill docked control added and brought to front
+            this.Controls.Add(pnlBottomBar);
+            this.Controls.Add(pnlScroll);
+            pnlScroll.BringToFront();
+
+            // Flow layout updater: automatically stacks all cards without overlapping
+            void UpdateCardsLayout()
+            {
+                int y = 10;
+                int pad = 12;
+                int effectiveWidth = Math.Max(730, pnlScroll.ClientSize.Width - (pad * 2));
+
+                Card[] cards = [cardSource, cardEngine, cardSecurity, cardAction];
+                foreach (var card in cards)
+                {
+                    if (card == null) continue;
+                    card.Location = new Point(pad, y);
+                    card.Width = effectiveWidth;
+                    y += card.Height + 14;
+                }
+
+                pnlScroll.AutoScrollMinSize = new Size(0, y + 10);
+            }
+
+            pnlScroll.Resize += (s, e) => UpdateCardsLayout();
+            this.Shown += (s, e) => UpdateCardsLayout();
+            UpdateCardsLayout();
         }
 
         private void ApplyLocalization()
