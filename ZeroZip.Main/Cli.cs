@@ -29,6 +29,7 @@ internal static class Cli
             return verb switch
             {
                 "c" or "compress" or "-c" => RunCompress(args),
+                "zip" or "--zip" => RunStandardZip(args),
                 "x" or "extract" or "-x" => RunExtract(args),
                 "i" or "info" or "-i" => RunInfo(args),
                 "l" or "list" or "-l" => RunList(args),
@@ -124,7 +125,15 @@ internal static class Cli
 
         if (source == null) return Fail("Thiếu đường dẫn nguồn.");
         if (output == null)
-            output = (Directory.Exists(source) ? source.TrimEnd('\\', '/') : Path.ChangeExtension(source, null)) + "_SFX.exe";
+            output = (Directory.Exists(source) ? source.TrimEnd('\\', '/') : Path.ChangeExtension(source, null)) + ".zz";
+
+        if (output.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"ZeroZip: Nén chuẩn ZIP cho \"{source}\" -> \"{output}\"");
+            StandardZip.CompressToZip(source, output);
+            Console.WriteLine($"✔ Hoàn tất nén ZIP: \"{output}\"");
+            return 0;
+        }
 
         CompressionOptions options;
         if (method == null)
@@ -162,8 +171,10 @@ internal static class Cli
             Console.WriteLine($"  precomp: {exe}");
         }
 
+        bool isSfx = output.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+
         Console.WriteLine($"ZeroZip: nén \"{source}\"");
-        Console.WriteLine($"  -> \"{output}\"  (method={method}, profile={profile}, level={options.Level}, " +
+        Console.WriteLine($"  -> \"{output}\" [{(isSfx ? "SFX Executable" : "Pure Archive")}] (method={method}, profile={profile}, level={options.Level}, " +
             $"ldm={options.LongDistanceMatching}, window={(options.WindowLog == 0 ? "auto" : options.WindowLog.ToString())}, " +
             $"threads={(options.Workers < 0 ? "auto" : options.Workers.ToString())}" +
             (usePrecomp ? ", precomp" : "") +
@@ -171,7 +182,7 @@ internal static class Cli
 
         var builder = new SfxBuilderService();
         var progress = new ConsoleProgress();
-        PackResult result = builder.BuildSfx(source, output, splitSize, options, progress, Cts.Token);
+        PackResult result = builder.BuildPackage(source, output, splitSize, options, isSfx, progress, Cts.Token);
         progress.Done();
 
         Console.WriteLine();
@@ -183,6 +194,31 @@ internal static class Cli
             string zip = builder.WrapForTransport(output);
             Console.WriteLine($"Đã bọc ZIP để gửi: \"{zip}\"");
         }
+        return 0;
+    }
+
+    private static int RunStandardZip(string[] args)
+    {
+        if (args.Length < 2) return Fail("Cú pháp: ZeroZip zip <nguồn> [-o <đích.zip>]");
+        string source = args[1];
+        string? output = null;
+        for (int i = 2; i < args.Length; i++)
+        {
+            if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
+            {
+                output = args[++i];
+            }
+        }
+        if (string.IsNullOrEmpty(output))
+        {
+            string baseDir = Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".";
+            string name = Path.GetFileName(source.TrimEnd('\\', '/'));
+            output = Path.Combine(baseDir, name + ".zip");
+        }
+
+        Console.WriteLine($"ZeroZip: Nén chuẩn PKZIP \"{source}\" -> \"{output}\"");
+        StandardZip.CompressToZip(source, output);
+        Console.WriteLine($"✔ Hoàn tất nén ZIP: \"{output}\"");
         return 0;
     }
 

@@ -23,8 +23,10 @@ namespace ZeroZip.Main.Services
         private const string DirBgContextMenuKey = @"Software\Classes\Directory\Background\ContextMenus\ZeroZip";
 
         private const string ArchiveClassKey = @"Software\Classes\ZeroZip.Archive";
-        private const string ExtensionKey = @"Software\Classes\.ztar";
-        private const string SystemFileAssocKey = @"Software\Classes\SystemFileAssociations\.ztar\shell";
+        private const string ExtensionKeyZz = @"Software\Classes\.zz";
+        private const string ExtensionKeyZtar = @"Software\Classes\.ztar";
+        private const string SystemFileAssocKeyZz = @"Software\Classes\SystemFileAssociations\.zz\shell";
+        private const string SystemFileAssocKeyZtar = @"Software\Classes\SystemFileAssociations\.ztar\shell";
 
         public static bool IsRegistered()
         {
@@ -138,15 +140,19 @@ namespace ZeroZip.Main.Services
                     PopulateBackgroundSubCommands(shell, exe);
                 }
 
-                // --- 4. File Association for .ztar (ZeroZip.Archive) ---
-                using (var extKey = Registry.CurrentUser.CreateSubKey(ExtensionKey))
+                // --- 4. File Association for .zz and .ztar (ZeroZip.Archive) ---
+                using (var extKey = Registry.CurrentUser.CreateSubKey(ExtensionKeyZz))
                 {
                     extKey.SetValue("", "ZeroZip.Archive");
+                }
+                using (var extKeyOld = Registry.CurrentUser.CreateSubKey(ExtensionKeyZtar))
+                {
+                    extKeyOld.SetValue("", "ZeroZip.Archive");
                 }
 
                 using (var archKey = Registry.CurrentUser.CreateSubKey(ArchiveClassKey))
                 {
-                    archKey.SetValue("", "ZeroZip Ultra-Compressed Archive");
+                    archKey.SetValue("", "ZeroZip Sovereign Archive (.zz)");
                     using (var dIcon = archKey.CreateSubKey("DefaultIcon"))
                     {
                         dIcon.SetValue("", $"\"{exe}\",0");
@@ -157,9 +163,13 @@ namespace ZeroZip.Main.Services
                 }
 
                 // SystemFileAssociations (Checked first by modern Windows Shell)
-                using (var sfaKey = Registry.CurrentUser.CreateSubKey(SystemFileAssocKey))
+                using (var sfaKeyZz = Registry.CurrentUser.CreateSubKey(SystemFileAssocKeyZz))
                 {
-                    PopulateArchiveShellVerbs(sfaKey, exe);
+                    PopulateArchiveShellVerbs(sfaKeyZz, exe);
+                }
+                using (var sfaKeyZtar = Registry.CurrentUser.CreateSubKey(SystemFileAssocKeyZtar))
+                {
+                    PopulateArchiveShellVerbs(sfaKeyZtar, exe);
                 }
 
                 NotifyShell();
@@ -179,42 +189,51 @@ namespace ZeroZip.Main.Services
                 c1.SetValue("MUIVerb", "Thêm vào tập tin nén...");
                 c1.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c1.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
+                cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
             }
 
-            using (var c2 = shell.CreateSubKey("02_CompressFast"))
+            using (var c2 = shell.CreateSubKey("02_CompressZz"))
             {
-                c2.SetValue("", "Nén nhanh sang .ztar");
-                c2.SetValue("MUIVerb", "Nén nhanh sang .ztar");
+                c2.SetValue("", "Nén nhanh sang .zz");
+                c2.SetValue("MUIVerb", "Nén nhanh sang .zz");
                 c2.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c2.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
             }
 
-            using (var c3 = shell.CreateSubKey("03_CompressSplit2G"))
+            using (var c3 = shell.CreateSubKey("03_CompressZip"))
             {
-                c3.SetValue("", "Nén & chia nhỏ 2GB (.001, .002)...");
-                c3.SetValue("MUIVerb", "Nén & chia nhỏ 2GB (.001, .002)...");
+                c3.SetValue("", "Nén nhanh sang .zip");
+                c3.SetValue("MUIVerb", "Nén nhanh sang .zip");
                 c3.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c3.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --zip");
+            }
+
+            using (var c4 = shell.CreateSubKey("04_CompressSplit2G"))
+            {
+                c4.SetValue("", "Nén & chia nhỏ 2GB (.001, .002)...");
+                c4.SetValue("MUIVerb", "Nén & chia nhỏ 2GB (.001, .002)...");
+                c4.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c4.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --split 2GB");
             }
 
-            using (var c4 = shell.CreateSubKey("04_OpenStudio"))
+            using (var c5 = shell.CreateSubKey("05_OpenStudio"))
             {
-                c4.SetValue("", "Mở trong ZeroZip Studio...");
-                c4.SetValue("MUIVerb", "Mở trong ZeroZip Studio...");
-                c4.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = c4.CreateSubKey("command");
+                c5.SetValue("", "Mở trong ZeroZip Studio...");
+                c5.SetValue("MUIVerb", "Mở trong ZeroZip Studio...");
+                c5.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c5.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
             }
 
-            using (var c5 = shell.CreateSubKey("05_CrcSha"))
+            using (var c6 = shell.CreateSubKey("06_CrcSha"))
             {
-                c5.SetValue("", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
-                c5.SetValue("MUIVerb", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
-                c5.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = c5.CreateSubKey("command");
+                c6.SetValue("", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
+                c6.SetValue("MUIVerb", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
+                c6.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c6.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" e \"%1\"");
             }
         }
@@ -227,54 +246,72 @@ namespace ZeroZip.Main.Services
                 c1.SetValue("MUIVerb", "Thêm vào tập tin nén...");
                 c1.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c1.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
+                cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
             }
 
-            using (var c2 = shell.CreateSubKey("02_CompressDirFast"))
+            using (var c2 = shell.CreateSubKey("02_CompressDirZz"))
             {
-                c2.SetValue("", "Nén nhanh thư mục sang .ztar");
-                c2.SetValue("MUIVerb", "Nén nhanh thư mục sang .ztar");
+                c2.SetValue("", "Nén nhanh thư mục sang .zz");
+                c2.SetValue("MUIVerb", "Nén nhanh thư mục sang .zz");
                 c2.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c2.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
             }
 
-            using (var c3 = shell.CreateSubKey("03_CompressDirSplit2G"))
+            using (var c3 = shell.CreateSubKey("03_CompressDirZip"))
             {
-                c3.SetValue("", "Nén thư mục chia nhỏ 2GB...");
-                c3.SetValue("MUIVerb", "Nén thư mục chia nhỏ 2GB...");
+                c3.SetValue("", "Nén nhanh thư mục sang .zip");
+                c3.SetValue("MUIVerb", "Nén nhanh thư mục sang .zip");
                 c3.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c3.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --zip");
+            }
+
+            using (var c4 = shell.CreateSubKey("04_CompressDirSplit2G"))
+            {
+                c4.SetValue("", "Nén thư mục chia nhỏ 2GB...");
+                c4.SetValue("MUIVerb", "Nén thư mục chia nhỏ 2GB...");
+                c4.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c4.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --split 2GB");
             }
 
-            using (var c4 = shell.CreateSubKey("04_OpenStudioDir"))
+            using (var c5 = shell.CreateSubKey("05_OpenStudioDir"))
             {
-                c4.SetValue("", "Mở trong ZeroZip Studio...");
-                c4.SetValue("MUIVerb", "Mở trong ZeroZip Studio...");
-                c4.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = c4.CreateSubKey("command");
+                c5.SetValue("", "Mở trong ZeroZip Studio...");
+                c5.SetValue("MUIVerb", "Mở trong ZeroZip Studio...");
+                c5.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c5.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
             }
         }
 
         private static void PopulateBackgroundSubCommands(RegistryKey shell, string exe)
         {
-            using (var c1 = shell.CreateSubKey("01_CompressCurrentFolder"))
+            using (var c1 = shell.CreateSubKey("01_CompressCurrentFolderZz"))
             {
-                c1.SetValue("", "Nén thư mục hiện tại sang .ztar...");
-                c1.SetValue("MUIVerb", "Nén thư mục hiện tại sang .ztar...");
+                c1.SetValue("", "Nén thư mục hiện tại sang .zz...");
+                c1.SetValue("MUIVerb", "Nén thư mục hiện tại sang .zz...");
                 c1.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c1.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-compress \"%V\"");
             }
 
-            using (var c2 = shell.CreateSubKey("02_OpenStudioCurrent"))
+            using (var c2 = shell.CreateSubKey("02_CompressCurrentFolderZip"))
             {
-                c2.SetValue("", "Mở ZeroZip Studio tại đây...");
-                c2.SetValue("MUIVerb", "Mở ZeroZip Studio tại đây...");
+                c2.SetValue("", "Nén thư mục hiện tại sang .zip...");
+                c2.SetValue("MUIVerb", "Nén thư mục hiện tại sang .zip...");
                 c2.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c2.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%V\" --zip");
+            }
+
+            using (var c3 = shell.CreateSubKey("03_OpenStudioCurrent"))
+            {
+                c3.SetValue("", "Mở ZeroZip Studio tại đây...");
+                c3.SetValue("MUIVerb", "Mở ZeroZip Studio tại đây...");
+                c3.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c3.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --studio \"%V\"");
             }
         }
@@ -339,7 +376,9 @@ namespace ZeroZip.Main.Services
                 Registry.CurrentUser.DeleteSubKeyTree(DirBgContextMenuKey, throwOnMissingSubKey: false);
 
                 Registry.CurrentUser.DeleteSubKeyTree(ArchiveClassKey, throwOnMissingSubKey: false);
-                Registry.CurrentUser.DeleteSubKeyTree(ExtensionKey, throwOnMissingSubKey: false);
+                Registry.CurrentUser.DeleteSubKeyTree(ExtensionKeyZz, throwOnMissingSubKey: false);
+                Registry.CurrentUser.DeleteSubKeyTree(ExtensionKeyZtar, throwOnMissingSubKey: false);
+                Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\SystemFileAssociations\.zz", throwOnMissingSubKey: false);
                 Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\SystemFileAssociations\.ztar", throwOnMissingSubKey: false);
 
                 NotifyShell();

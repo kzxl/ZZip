@@ -78,6 +78,17 @@ namespace ZeroZip.Main.Services
         }
 
         /// <summary>
+        /// Closes the currently loaded archive and resets internal state.
+        /// </summary>
+        public void CloseArchive()
+        {
+            _currentArchivePath = null;
+            _currentFooter = null;
+            _currentVirtualPath = "";
+            _allEntries.Clear();
+        }
+
+        /// <summary>
         /// Retrieves visible entries within the current virtual directory.
         /// </summary>
         public IReadOnlyList<VirtualItem> GetCurrentDirectoryItems()

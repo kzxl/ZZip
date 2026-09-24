@@ -35,53 +35,109 @@ namespace ZeroZip.Main
         private readonly string? _initialSourcePath;
         private readonly bool _openStudio;
 
-        // UI Header & Toolbar
-        private Label lblAppTitle = null!;
-        private Label lblAppSub = null!;
-        private SimpleButton btnToggleTheme = null!;
+        // UI Menu Bar
+        private MenuStrip menuBar = null!;
+        private ToolStripMenuItem menuFile = null!;
+        private ToolStripMenuItem itemOpenArchive = null!;
+        private ToolStripMenuItem itemNewArchive = null!;
+        private ToolStripMenuItem itemCloseArchive = null!;
+        private ToolStripMenuItem itemExit = null!;
+        private ToolStripMenuItem menuCommands = null!;
+        private ToolStripMenuItem itemAddFiles = null!;
+        private ToolStripMenuItem itemExtractTo = null!;
+        private ToolStripMenuItem itemTestArchive = null!;
+        private ToolStripMenuItem itemViewFile = null!;
+        private ToolStripMenuItem itemSelectAll = null!;
+        private ToolStripMenuItem menuTools = null!;
+        private ToolStripMenuItem itemEstimate = null!;
+        private ToolStripMenuItem itemShellIntegrate = null!;
+        private ToolStripMenuItem menuOptions = null!;
+        private ToolStripMenuItem itemToggleTheme = null!;
+        private ToolStripMenuItem menuLanguage = null!;
+        private ToolStripMenuItem itemLangVi = null!;
+        private ToolStripMenuItem itemLangEn = null!;
+        private ToolStripMenuItem menuHelp = null!;
+        private ToolStripMenuItem itemAbout = null!;
+
+        // Action Toolbar
         private Panel pnlWinRarToolbar = null!;
         private SimpleButton tbBtnAdd = null!;
+        private SimpleButton tbBtnOpen = null!;
         private SimpleButton tbBtnExtract = null!;
         private SimpleButton tbBtnTest = null!;
         private SimpleButton tbBtnView = null!;
         private SimpleButton tbBtnInfo = null!;
         private SimpleButton tbBtnContextMenu = null!;
+        private SimpleButton tbBtnLang = null!;
+        private SimpleButton btnToggleTheme = null!;
 
         // Navigation Tabs
         private TabControlEx tabControl = null!;
+        private TabPageEx tabExplorer = null!;
+        private TabPageEx tabStudio = null!;
 
         // --- Tab 1: WinRAR Archive Explorer ---
         private readonly ArchiveExplorerService _archiveExplorer;
         private ButtonEdit txtCurrentPath = null!;
         private SimpleButton btnUpLevel = null!;
+        private SimpleButton btnRefresh = null!;
         private SimpleButton btnOpenArchive = null!;
         private ListView lvArchiveFiles = null!;
+        private ListViewColumnSorter _columnSorter = null!;
+        private ColumnHeader colName = null!;
+        private ColumnHeader colOrigSize = null!;
+        private ColumnHeader colPackedSize = null!;
+        private ColumnHeader colRatio = null!;
+        private ColumnHeader colMethod = null!;
+        private ColumnHeader colModified = null!;
+        private ColumnHeader colCrc = null!;
+        private ColumnHeader colType = null!;
+        private ColumnHeader colAttr = null!;
         private ImageList imgListFiles = null!;
         private ContextMenuStrip contextMenuFiles = null!;
+        private ToolStripMenuItem itemCtxOpen = null!;
+        private ToolStripMenuItem itemCtxExtract = null!;
+        private ToolStripMenuItem itemCtxCopy = null!;
+        private ToolStripMenuItem itemCtxInfo = null!;
+        private ToolStripMenuItem itemCtxOpenAnother = null!;
+        private ToolStripMenuItem itemCtxTest = null!;
+        private ToolStripMenuItem itemCtxRefresh = null!;
+        private ToolStripMenuItem itemCtxSelectAll = null!;
         private StatusStrip statusStripArchive = null!;
         private ToolStripStatusLabel lblStatusItems = null!;
         private ToolStripStatusLabel lblStatusSelection = null!;
         private ToolStripStatusLabel lblStatusFormat = null!;
 
         // --- Tab 2: Studio SFX & Packer ---
+        private Card cardSource = null!;
+        private Card cardEngine = null!;
+        private Card cardSecurity = null!;
+        private Card cardExec = null!;
+        private Label lblSrc = null!;
         private ButtonEdit txtSource = null!;
         private SimpleButton btnBrowseSourceFolder = null!;
         private SimpleButton btnBrowseSourceFile = null!;
+        private Label lblDst = null!;
         private ButtonEdit txtDest = null!;
         private SimpleButton btnBrowseDest = null!;
-        private ComboBoxEdit cmbSplitMode = null!;
+        private Label lblMethod = null!;
         private ComboBoxEdit cmbMethod = null!;
+        private Label lblProfile = null!;
         private ComboBoxEdit cmbProfile = null!;
-        private TextEdit txtPassword = null!;
+        private Label lblSplit = null!;
+        private ComboBoxEdit cmbSplitMode = null!;
         private CheckEdit chkWrapZip = null!;
         private CheckEdit chkPrecomp = null!;
         private CheckEdit chkLong = null!;
+        private Label lblAutoDetectBadge = null!;
+        private Label lblPass = null!;
+        private TextEdit txtPassword = null!;
+        private Label lblCryptoNotice = null!;
         private SimpleButton btnEstimate = null!;
         private SimpleButton btnCompress = null!;
         private SimpleButton btnCancel = null!;
         private ProgressBarControl progressBar = null!;
         private Label lblStatus = null!;
-        private Label lblAutoDetectBadge = null!;
 
         // Services
         private readonly SfxBuilderService _sfxService;
@@ -97,6 +153,10 @@ namespace ZeroZip.Main
             _archiveExplorer = new ArchiveExplorerService();
 
             InitializeComponent();
+
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            this.FormClosed += (s, e) => LocalizationService.LanguageChanged -= OnLanguageChanged;
+            ApplyLocalization();
         }
 
         protected override async Task RunAfterShown()
@@ -121,9 +181,9 @@ namespace ZeroZip.Main
 
         private void InitializeComponent()
         {
-            this.Text = "ZeroZip — Sovereign Ultra-Compression Studio & Archive Explorer";
+            this.Text = LocalizationService.Get("App_Title");
             TrySetWindowIcon();
-            this.Size = new Size(960, 750);
+            this.Size = new Size(1000, 750);
             this.MinimumSize = new Size(880, 640);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.AllowDrop = true;
@@ -132,47 +192,67 @@ namespace ZeroZip.Main
             this.DragEnter += Form1_DragEnter;
             this.DragDrop += Form1_DragDrop;
 
-            // 1. Top Header Bar
-            var pnlHeader = new Panel
+            // 1. Menu Bar (WinRAR & 7-Zip Style)
+            menuBar = new MenuStrip
             {
                 Dock = DockStyle.Top,
-                Height = 52,
-                Padding = new Padding(18, 6, 18, 6),
-                BackColor = ZeroTheme.Colors.Surface
+                RenderMode = ToolStripRenderMode.System,
+                BackColor = ZeroTheme.Colors.Surface,
+                ForeColor = ZeroTheme.Colors.TextPrimary,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular)
             };
 
-            lblAppTitle = new Label
+            // Menu: File (Tập tin)
+            menuFile = new ToolStripMenuItem(LocalizationService.Get("Menu_File"));
+            itemOpenArchive = new ToolStripMenuItem(LocalizationService.Get("Menu_OpenArchive"), null, (s, e) => BrowseAndOpenArchive(), Keys.Control | Keys.O);
+            itemNewArchive = new ToolStripMenuItem(LocalizationService.Get("Menu_NewArchive"), null, (s, e) => tabControl.SelectedIndex = 1, Keys.Control | Keys.N);
+            itemCloseArchive = new ToolStripMenuItem(LocalizationService.Get("Menu_CloseArchive"), null, (s, e) => CloseArchive());
+            itemExit = new ToolStripMenuItem(LocalizationService.Get("Menu_Exit"), null, (s, e) => this.Close(), Keys.Alt | Keys.F4);
+            menuFile.DropDownItems.AddRange(new ToolStripItem[] { itemOpenArchive, itemNewArchive, itemCloseArchive, new ToolStripSeparator(), itemExit });
+
+            // Menu: Commands (Lệnh)
+            menuCommands = new ToolStripMenuItem(LocalizationService.Get("Menu_Commands"));
+            itemAddFiles = new ToolStripMenuItem(LocalizationService.Get("Menu_AddFiles"), null, (s, e) => tabControl.SelectedIndex = 1);
+            itemExtractTo = new ToolStripMenuItem(LocalizationService.Get("Menu_ExtractTo"), null, (s, e) => TbBtnExtract_Click(s, e));
+            itemTestArchive = new ToolStripMenuItem(LocalizationService.Get("Menu_TestArchive"), null, (s, e) => TbBtnTest_Click(s, e));
+            itemViewFile = new ToolStripMenuItem(LocalizationService.Get("Menu_ViewFile"), null, (s, e) => OpenSelectedFile());
+            itemSelectAll = new ToolStripMenuItem(LocalizationService.Get("Menu_SelectAll"), null, (s, e) =>
             {
-                Text = "⚡ ZEROZIP SOVEREIGN ARCHIVER",
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-                Location = new Point(16, 6),
-                AutoSize = true,
-                ForeColor = ZeroTheme.Colors.Primary
-            };
-            pnlHeader.Controls.Add(lblAppTitle);
+                foreach (ListViewItem it in lvArchiveFiles.Items) it.Selected = true;
+            }, Keys.Control | Keys.A);
+            menuCommands.DropDownItems.AddRange(new ToolStripItem[] { itemAddFiles, itemExtractTo, itemTestArchive, itemViewFile, new ToolStripSeparator(), itemSelectAll });
 
-            lblAppSub = new Label
+            // Menu: Tools (Công cụ)
+            menuTools = new ToolStripMenuItem(LocalizationService.Get("Menu_Tools"));
+            itemEstimate = new ToolStripMenuItem(LocalizationService.Get("Menu_Estimate"), null, (s, e) => { tabControl.SelectedIndex = 1; BtnEstimate_Click(s, e); });
+            itemShellIntegrate = new ToolStripMenuItem(LocalizationService.Get("Menu_ShellIntegrate"), null, (s, e) => TbBtnContextMenu_Click(s, e));
+            menuTools.DropDownItems.AddRange(new ToolStripItem[] { itemEstimate, itemShellIntegrate });
+
+            // Menu: Options (Tùy chọn)
+            menuOptions = new ToolStripMenuItem(LocalizationService.Get("Menu_Options"));
+            itemToggleTheme = new ToolStripMenuItem(LocalizationService.Get("Menu_ToggleTheme"), null, (s, e) => BtnToggleTheme_Click(s, e), Keys.Control | Keys.T);
+            menuOptions.DropDownItems.AddRange(new ToolStripItem[] { itemToggleTheme });
+
+            // Menu: Language (Ngôn ngữ)
+            menuLanguage = new ToolStripMenuItem(LocalizationService.Get("Menu_Language"));
+            itemLangVi = new ToolStripMenuItem(LocalizationService.Get("Menu_Lang_Vi"), null, (s, e) => LocalizationService.SetLanguage(AppLanguage.Vietnamese));
+            itemLangEn = new ToolStripMenuItem(LocalizationService.Get("Menu_Lang_En"), null, (s, e) => LocalizationService.SetLanguage(AppLanguage.English));
+            itemLangVi.Checked = LocalizationService.CurrentLanguage == AppLanguage.Vietnamese;
+            itemLangEn.Checked = LocalizationService.CurrentLanguage == AppLanguage.English;
+            menuLanguage.DropDownItems.AddRange(new ToolStripItem[] { itemLangVi, itemLangEn });
+
+            // Menu: Help (Trợ giúp)
+            menuHelp = new ToolStripMenuItem(LocalizationService.Get("Menu_Help"));
+            itemAbout = new ToolStripMenuItem(LocalizationService.Get("Menu_About"), null, (s, e) =>
             {
-                Text = "Ultra-Compression (Zstd/LZMA/Gorilla) & High-Performance Archive Suite — ZeroUniverse",
-                Font = new Font("Segoe UI", 8.25f, FontStyle.Regular),
-                Location = new Point(17, 28),
-                AutoSize = true,
-                ForeColor = ZeroTheme.Colors.TextSecondary
-            };
-            pnlHeader.Controls.Add(lblAppSub);
+                ModalDialog.Info(this, LocalizationService.Get("Msg_AboutTitle"), LocalizationService.Get("Msg_AboutText"));
+            });
+            menuHelp.DropDownItems.AddRange(new ToolStripItem[] { itemAbout });
 
-            btnToggleTheme = new SimpleButton
-            {
-                Text = ZeroTheme.IsDark ? "☀️ Giao diện Sáng" : "🌙 Giao diện Tối",
-                ButtonStyle = ZeroButtonStyle.Ghost,
-                Size = new Size(140, 30),
-                Location = new Point(780, 10),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnToggleTheme.Click += BtnToggleTheme_Click;
-            pnlHeader.Controls.Add(btnToggleTheme);
+            menuBar.Items.AddRange(new ToolStripItem[] { menuFile, menuCommands, menuTools, menuOptions, menuLanguage, menuHelp });
+            this.MainMenuStrip = menuBar;
 
-            // 2. WinRAR Action Toolbar
+            // 2. Action Toolbar (Compact 44px)
             BuildWinRarToolbar();
 
             // 3. TabControl Navigation
@@ -184,8 +264,8 @@ namespace ZeroZip.Main
                 TabWidth = 260
             };
 
-            var tabExplorer = tabControl.AddTab("📁 Trình Duyệt Gói Nén (Explorer)", "");
-            var tabStudio = tabControl.AddTab("⚡ Siêu Nén & Đóng Gói (Studio)", "");
+            tabExplorer = tabControl.AddTab(LocalizationService.Get("Tab_Explorer"), "");
+            tabStudio = tabControl.AddTab(LocalizationService.Get("Tab_Studio"), "");
 
             BuildArchiveExplorerTab(tabExplorer);
             BuildStudioTab(tabStudio);
@@ -193,7 +273,7 @@ namespace ZeroZip.Main
             // Add controls in reverse dock order
             this.Controls.Add(tabControl);
             this.Controls.Add(pnlWinRarToolbar);
-            this.Controls.Add(pnlHeader);
+            this.Controls.Add(menuBar);
         }
 
         private void BuildWinRarToolbar()
@@ -201,79 +281,113 @@ namespace ZeroZip.Main
             pnlWinRarToolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 50,
-                Padding = new Padding(12, 6, 12, 6),
+                Height = 44,
+                Padding = new Padding(8, 4, 8, 4),
                 BackColor = ZeroTheme.Colors.Background
             };
 
-            int x = 12;
-            int btnWidth = 110;
-            int gap = 8;
+            int x = 8;
+            int btnHeight = 32;
+            int gap = 6;
 
             tbBtnAdd = new SimpleButton
             {
-                Text = "➕ Thêm...",
+                Text = LocalizationService.Get("Btn_Add"),
                 ButtonStyle = ZeroButtonStyle.Primary,
-                Location = new Point(x, 8),
-                Size = new Size(btnWidth, 34)
+                Location = new Point(x, 6),
+                Size = new Size(100, btnHeight)
             };
             tbBtnAdd.Click += (s, e) => tabControl.SelectedIndex = 1;
             pnlWinRarToolbar.Controls.Add(tbBtnAdd);
-            x += btnWidth + gap;
+            x += 100 + gap;
+
+            tbBtnOpen = new SimpleButton
+            {
+                Text = LocalizationService.Get("Btn_Open"),
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Location = new Point(x, 6),
+                Size = new Size(100, btnHeight)
+            };
+            tbBtnOpen.Click += (s, e) => BrowseAndOpenArchive();
+            pnlWinRarToolbar.Controls.Add(tbBtnOpen);
+            x += 100 + gap;
 
             tbBtnExtract = new SimpleButton
             {
-                Text = "📂 Giải nén...",
+                Text = LocalizationService.Get("Btn_Extract"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(x, 8),
-                Size = new Size(btnWidth, 34)
+                Location = new Point(x, 6),
+                Size = new Size(105, btnHeight)
             };
             tbBtnExtract.Click += TbBtnExtract_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnExtract);
-            x += btnWidth + gap;
+            x += 105 + gap;
 
             tbBtnTest = new SimpleButton
             {
-                Text = "🧪 Kiểm tra",
+                Text = LocalizationService.Get("Btn_Test"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(x, 8),
-                Size = new Size(btnWidth, 34)
+                Location = new Point(x, 6),
+                Size = new Size(95, btnHeight)
             };
             tbBtnTest.Click += TbBtnTest_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnTest);
-            x += btnWidth + gap;
+            x += 95 + gap;
 
             tbBtnView = new SimpleButton
             {
-                Text = "👁️ Xem tệp",
+                Text = LocalizationService.Get("Btn_View"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(x, 8),
-                Size = new Size(btnWidth, 34)
+                Location = new Point(x, 6),
+                Size = new Size(95, btnHeight)
             };
             tbBtnView.Click += TbBtnView_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnView);
-            x += btnWidth + gap;
+            x += 95 + gap;
 
             tbBtnInfo = new SimpleButton
             {
-                Text = "ℹ️ Thông tin",
+                Text = LocalizationService.Get("Btn_Info"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(x, 8),
-                Size = new Size(btnWidth, 34)
+                Location = new Point(x, 6),
+                Size = new Size(95, btnHeight)
             };
             tbBtnInfo.Click += TbBtnInfo_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnInfo);
-            x += btnWidth + gap;
+            x += 95 + gap;
 
             tbBtnContextMenu = new SimpleButton
             {
-                Text = ShellContextMenuService.IsRegistered() ? "✓ Đã bật Menu Explorer" : "⚙️ Bật Menu Explorer",
+                Text = ShellContextMenuService.IsRegistered() ? LocalizationService.Get("Btn_Shell_On") : LocalizationService.Get("Btn_Shell_Off"),
                 ButtonStyle = ZeroButtonStyle.Ghost,
-                Location = new Point(x, 8),
-                Size = new Size(180, 34)
+                Location = new Point(x, 6),
+                Size = new Size(150, btnHeight)
             };
             tbBtnContextMenu.Click += TbBtnContextMenu_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnContextMenu);
+
+            // Right side buttons
+            tbBtnLang = new SimpleButton
+            {
+                Text = LocalizationService.Get("Btn_Lang_Toggle"),
+                ButtonStyle = ZeroButtonStyle.Ghost,
+                Size = new Size(72, btnHeight),
+                Location = new Point(pnlWinRarToolbar.Width - 156, 6),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            tbBtnLang.Click += (s, e) => LocalizationService.ToggleLanguage();
+            pnlWinRarToolbar.Controls.Add(tbBtnLang);
+
+            btnToggleTheme = new SimpleButton
+            {
+                Text = ZeroTheme.IsDark ? LocalizationService.Get("Btn_Theme_Light") : LocalizationService.Get("Btn_Theme_Dark"),
+                ButtonStyle = ZeroButtonStyle.Ghost,
+                Size = new Size(72, btnHeight),
+                Location = new Point(pnlWinRarToolbar.Width - 78, 6),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnToggleTheme.Click += BtnToggleTheme_Click;
+            pnlWinRarToolbar.Controls.Add(btnToggleTheme);
         }
 
         #region Tab 1: WinRAR Archive Explorer
@@ -283,7 +397,7 @@ namespace ZeroZip.Main
             var pnlMain = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(12)
+                Padding = new Padding(10, 6, 10, 6)
             };
             page.Controls.Add(pnlMain);
 
@@ -291,16 +405,16 @@ namespace ZeroZip.Main
             var pnlPath = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
-                Padding = new Padding(0, 2, 0, 6)
+                Height = 36,
+                Padding = new Padding(0, 2, 0, 4)
             };
 
             btnUpLevel = new SimpleButton
             {
-                Text = "⬆️ Lên",
+                Text = LocalizationService.Get("Path_Up"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(0, 2),
-                Size = new Size(68, 30)
+                Dock = DockStyle.Left,
+                Width = 72
             };
             btnUpLevel.Click += (s, e) =>
             {
@@ -309,27 +423,44 @@ namespace ZeroZip.Main
                     RefreshFileListView();
                 }
             };
-            pnlPath.Controls.Add(btnUpLevel);
-
-            txtCurrentPath = new ButtonEdit
-            {
-                Location = new Point(74, 2),
-                Size = new Size(640, 30),
-                ReadOnly = true,
-                Text = "\\"
-            };
-            pnlPath.Controls.Add(txtCurrentPath);
 
             btnOpenArchive = new SimpleButton
             {
-                Text = "📂 Mở gói...",
+                Text = LocalizationService.Get("Path_OpenArchive"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(720, 2),
-                Size = new Size(100, 30),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Dock = DockStyle.Right,
+                Width = 95
             };
             btnOpenArchive.Click += (s, e) => BrowseAndOpenArchive();
+
+            btnRefresh = new SimpleButton
+            {
+                Text = LocalizationService.Get("Path_Refresh"),
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Dock = DockStyle.Right,
+                Width = 85
+            };
+            btnRefresh.Click += (s, e) => RefreshFileListView();
+
+            var pnlPathCenter = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(6, 0, 6, 0)
+            };
+
+            txtCurrentPath = new ButtonEdit
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                Text = "\\"
+            };
+            pnlPathCenter.Controls.Add(txtCurrentPath);
+
+            pnlPath.Controls.Add(pnlPathCenter);
+            pnlPath.Controls.Add(btnRefresh);
             pnlPath.Controls.Add(btnOpenArchive);
+            pnlPath.Controls.Add(btnUpLevel);
+            pnlPathCenter.BringToFront();
 
             pnlMain.Controls.Add(pnlPath);
 
@@ -341,14 +472,14 @@ namespace ZeroZip.Main
                 ForeColor = ZeroTheme.Colors.TextSecondary
             };
 
-            lblStatusItems = new ToolStripStatusLabel("Chưa mở gói nén nào.") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
-            lblStatusSelection = new ToolStripStatusLabel("") { AutoSize = true };
+            lblStatusItems = new ToolStripStatusLabel(LocalizationService.Get("Status_NoArchive")) { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+            lblStatusSelection = new ToolStripStatusLabel(LocalizationService.Get("Status_ZeroSelected")) { AutoSize = true };
             lblStatusFormat = new ToolStripStatusLabel("") { AutoSize = true };
 
             statusStripArchive.Items.AddRange(new ToolStripItem[] { lblStatusItems, lblStatusSelection, lblStatusFormat });
             pnlMain.Controls.Add(statusStripArchive);
 
-            // File ListView (WinRAR View)
+            // File ListView (WinRAR / 7-Zip Details View)
             imgListFiles = CreateImageList();
 
             lvArchiveFiles = new ListView
@@ -364,11 +495,24 @@ namespace ZeroZip.Main
                 Font = new Font("Segoe UI", 9.25f, FontStyle.Regular)
             };
 
-            lvArchiveFiles.Columns.Add("Tên", 320);
-            lvArchiveFiles.Columns.Add("Dung lượng gốc", 120, HorizontalAlignment.Right);
-            lvArchiveFiles.Columns.Add("Kích thước nén / Tỷ lệ", 130, HorizontalAlignment.Right);
-            lvArchiveFiles.Columns.Add("Ngày sửa đổi", 150);
-            lvArchiveFiles.Columns.Add("Loại", 100);
+            colName = new ColumnHeader { Text = LocalizationService.Get("Col_Name"), Width = 280 };
+            colOrigSize = new ColumnHeader { Text = LocalizationService.Get("Col_OriginalSize"), Width = 110, TextAlign = HorizontalAlignment.Right };
+            colPackedSize = new ColumnHeader { Text = LocalizationService.Get("Col_PackedSize"), Width = 110, TextAlign = HorizontalAlignment.Right };
+            colRatio = new ColumnHeader { Text = LocalizationService.Get("Col_Ratio"), Width = 75, TextAlign = HorizontalAlignment.Right };
+            colMethod = new ColumnHeader { Text = LocalizationService.Get("Col_Method"), Width = 100, TextAlign = HorizontalAlignment.Center };
+            colModified = new ColumnHeader { Text = LocalizationService.Get("Col_Modified"), Width = 135 };
+            colCrc = new ColumnHeader { Text = LocalizationService.Get("Col_CRC"), Width = 85, TextAlign = HorizontalAlignment.Center };
+            colType = new ColumnHeader { Text = LocalizationService.Get("Col_Type"), Width = 95 };
+            colAttr = new ColumnHeader { Text = LocalizationService.Get("Col_Attributes"), Width = 75, TextAlign = HorizontalAlignment.Center };
+
+            lvArchiveFiles.Columns.AddRange(new ColumnHeader[]
+            {
+                colName, colOrigSize, colPackedSize, colRatio, colMethod, colModified, colCrc, colType, colAttr
+            });
+
+            _columnSorter = new ListViewColumnSorter();
+            lvArchiveFiles.ListViewItemSorter = _columnSorter;
+            lvArchiveFiles.ColumnClick += LvArchiveFiles_ColumnClick;
 
             lvArchiveFiles.DoubleClick += LvArchiveFiles_DoubleClick;
             lvArchiveFiles.SelectedIndexChanged += LvArchiveFiles_SelectedIndexChanged;
@@ -434,6 +578,7 @@ namespace ZeroZip.Main
             lvArchiveFiles.ContextMenuStrip = contextMenuFiles;
 
             pnlMain.Controls.Add(lvArchiveFiles);
+            lvArchiveFiles.BringToFront(); // Crucial: gives lvArchiveFiles proper client bounds under pnlPath!
         }
 
         private ImageList CreateImageList()
@@ -476,32 +621,32 @@ namespace ZeroZip.Main
                 ForeColor = ZeroTheme.Colors.TextPrimary
             };
 
-            var itemOpen = new ToolStripMenuItem("👁️ Mở / Xem tệp (Open/View)", null, (s, e) => OpenSelectedFile());
-            var itemExtract = new ToolStripMenuItem("📂 Giải nén tệp đã chọn... (Extract Selected)", null, (s, e) => ExtractSelectedFiles());
-            var itemCopy = new ToolStripMenuItem("📋 Sao chép đường dẫn (Copy Path)", null, (s, e) => CopySelectedPath());
-            var itemInfo = new ToolStripMenuItem("ℹ️ Thuộc tính tệp (Properties)", null, (s, e) => ShowSelectedFileInfo());
+            itemCtxOpen = new ToolStripMenuItem(LocalizationService.Get("Menu_ViewFile"), null, (s, e) => OpenSelectedFile());
+            itemCtxExtract = new ToolStripMenuItem(LocalizationService.Get("Menu_ExtractTo"), null, (s, e) => ExtractSelectedFiles());
+            itemCtxCopy = new ToolStripMenuItem(LocalizationService.Get("Ctx_CopyPath"), null, (s, e) => CopySelectedPath());
+            itemCtxInfo = new ToolStripMenuItem(LocalizationService.Get("Ctx_Properties"), null, (s, e) => ShowSelectedFileInfo());
 
             var sep1 = new ToolStripSeparator();
-            var itemOpenAnother = new ToolStripMenuItem("📂 Mở gói nén khác...", null, (s, e) => BrowseAndOpenArchive());
-            var itemTest = new ToolStripMenuItem("🧪 Kiểm tra toàn vẹn gói nén", null, (s, e) => TbBtnTest_Click(s, e));
-            var itemRefresh = new ToolStripMenuItem("🔄 Làm mới danh sách (F5)", null, (s, e) => RefreshFileListView());
-            var itemSelectAll = new ToolStripMenuItem("☑️ Chọn tất cả (Ctrl+A)", null, (s, e) =>
+            itemCtxOpenAnother = new ToolStripMenuItem(LocalizationService.Get("Menu_OpenArchive"), null, (s, e) => BrowseAndOpenArchive());
+            itemCtxTest = new ToolStripMenuItem(LocalizationService.Get("Menu_TestArchive"), null, (s, e) => TbBtnTest_Click(s, e));
+            itemCtxRefresh = new ToolStripMenuItem(LocalizationService.Get("Path_Refresh") + " (F5)", null, (s, e) => RefreshFileListView());
+            itemCtxSelectAll = new ToolStripMenuItem(LocalizationService.Get("Menu_SelectAll"), null, (s, e) =>
             {
                 foreach (ListViewItem it in lvArchiveFiles.Items) it.Selected = true;
             });
 
             contextMenuFiles.Items.AddRange(new ToolStripItem[]
             {
-                itemOpen,
-                itemExtract,
+                itemCtxOpen,
+                itemCtxExtract,
                 new ToolStripSeparator(),
-                itemCopy,
-                itemInfo,
+                itemCtxCopy,
+                itemCtxInfo,
                 sep1,
-                itemOpenAnother,
-                itemTest,
-                itemRefresh,
-                itemSelectAll
+                itemCtxOpenAnother,
+                itemCtxTest,
+                itemCtxRefresh,
+                itemCtxSelectAll
             });
 
             contextMenuFiles.Opening += (s, e) =>
@@ -512,15 +657,15 @@ namespace ZeroZip.Main
                 var firstSel = hasSelection ? lvArchiveFiles.SelectedItems[0].Tag as VirtualItem : null;
                 bool isDir = firstSel != null && firstSel.IsDirectory;
 
-                itemOpen.Visible = hasSelection;
-                itemOpen.Text = isDir ? "📁 Mở thư mục này" : "👁️ Mở / Xem tệp (Open/View)";
-                itemExtract.Visible = hasSelection;
-                itemCopy.Visible = hasSelection;
-                itemInfo.Visible = hasSelection;
+                itemCtxOpen.Visible = hasSelection;
+                itemCtxOpen.Text = isDir ? LocalizationService.Get("Ctx_OpenFolder") : LocalizationService.Get("Menu_ViewFile");
+                itemCtxExtract.Visible = hasSelection;
+                itemCtxCopy.Visible = hasSelection;
+                itemCtxInfo.Visible = hasSelection;
                 sep1.Visible = hasSelection;
 
-                itemTest.Enabled = hasArchive;
-                itemRefresh.Enabled = hasArchive;
+                itemCtxTest.Enabled = hasArchive;
+                itemCtxRefresh.Enabled = hasArchive;
             };
         }
 
@@ -528,7 +673,7 @@ namespace ZeroZip.Main
         {
             using var ofd = new OpenFileDialog
             {
-                Filter = "Gói nén ZeroZip (*.ztar;*.exe)|*.ztar;*.exe|Tất cả tệp (*.*)|*.*",
+                Filter = "Gói nén ZeroZip (*.zz;*.ztar;*.exe)|*.zz;*.ztar;*.exe|Kho lưu trữ .zz (*.zz)|*.zz|Executable SFX (*.exe)|*.exe|Tệp nén ZIP (*.zip)|*.zip|Tất cả tệp (*.*)|*.*",
                 Title = "Chọn tệp nén ZeroZip để mở"
             };
             if (ofd.ShowDialog() == DialogResult.OK)
@@ -587,6 +732,11 @@ namespace ZeroZip.Main
 
             var items = _archiveExplorer.GetCurrentDirectoryItems();
 
+            long origTotal = _archiveExplorer.CurrentFooter?.OriginalSize ?? 0;
+            long payloadTotal = _archiveExplorer.CurrentFooter?.PayloadSize ?? 0;
+            string methodText = _archiveExplorer.CurrentFooter?.Method.ToString() ?? "Zstd";
+            string crcText = _archiveExplorer.CurrentFooter != null ? $"{_archiveExplorer.CurrentFooter.Crc32:X8}" : "—";
+
             foreach (var item in items)
             {
                 var lvi = new ListViewItem(item.Name, item.IsDirectory ? "folder" : "file")
@@ -596,18 +746,39 @@ namespace ZeroZip.Main
 
                 if (item.IsDirectory)
                 {
-                    lvi.SubItems.Add("");
-                    lvi.SubItems.Add("<Thư mục>");
-                    lvi.SubItems.Add(item.ModificationTime == default ? "" : item.ModificationTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm"));
-                    lvi.SubItems.Add("Thư mục");
+                    lvi.SubItems.Add("");                                                                   // 1. Original Size
+                    lvi.SubItems.Add("");                                                                   // 2. Packed Size
+                    lvi.SubItems.Add("");                                                                   // 3. Ratio
+                    lvi.SubItems.Add("");                                                                   // 4. Method
+                    lvi.SubItems.Add(item.ModificationTime == default ? "" : item.ModificationTime.LocalDateTime.ToString("dd/MM/yyyy HH:mm")); // 5. Modified
+                    lvi.SubItems.Add("");                                                                   // 6. CRC32
+                    lvi.SubItems.Add(LocalizationService.Get("Type_Folder"));                               // 7. Type
+                    lvi.SubItems.Add("D----");                                                              // 8. Attributes
                 }
                 else
                 {
-                    lvi.SubItems.Add(FormatSize(item.Size));
-                    lvi.SubItems.Add("Zstandard");
-                    lvi.SubItems.Add(item.ModificationTime == default ? "" : item.ModificationTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm"));
+                    lvi.SubItems.Add(FormatSize(item.Size));                                                // 1. Original Size
+
+                    if (origTotal > 0 && payloadTotal > 0)
+                    {
+                        long packedEst = (long)Math.Round((double)item.Size * payloadTotal / origTotal);
+                        lvi.SubItems.Add(FormatSize(packedEst));                                            // 2. Packed Size
+                        double ratio = (double)payloadTotal / origTotal;
+                        lvi.SubItems.Add(ratio.ToString("P0"));                                             // 3. Ratio
+                    }
+                    else
+                    {
+                        lvi.SubItems.Add(FormatSize(item.Size));
+                        lvi.SubItems.Add("—");
+                    }
+
+                    lvi.SubItems.Add(methodText);                                                           // 4. Method
+                    lvi.SubItems.Add(item.ModificationTime == default ? "" : item.ModificationTime.LocalDateTime.ToString("dd/MM/yyyy HH:mm")); // 5. Modified
+                    lvi.SubItems.Add(crcText);                                                              // 6. CRC32
+
                     string ext = Path.GetExtension(item.Name).TrimStart('.').ToUpperInvariant();
-                    lvi.SubItems.Add(string.IsNullOrEmpty(ext) ? "Tệp tin" : $"{ext} File");
+                    lvi.SubItems.Add(string.IsNullOrEmpty(ext) ? LocalizationService.Get("Type_File") : $"{ext} File"); // 7. Type
+                    lvi.SubItems.Add("----A");                                                              // 8. Attributes
                 }
 
                 lvArchiveFiles.Items.Add(lvi);
@@ -618,15 +789,15 @@ namespace ZeroZip.Main
             int dirCount = items.Count(i => i.IsDirectory);
             int fileCount = items.Count(i => !i.IsDirectory);
             long totalSize = items.Where(i => !i.IsDirectory).Sum(i => i.Size);
-            lblStatusItems.Text = $"{fileCount} tệp, {dirCount} thư mục | Thư mục hiện tại: {FormatSize(totalSize)}";
-            lblStatusSelection.Text = "0 mục được chọn";
+            lblStatusItems.Text = LocalizationService.Get("Status_ItemsSummary", fileCount, dirCount, FormatSize(totalSize));
+            lblStatusSelection.Text = LocalizationService.Get("Status_ZeroSelected");
         }
 
         private void LvArchiveFiles_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (lvArchiveFiles.SelectedItems.Count == 0)
             {
-                lblStatusSelection.Text = "0 mục được chọn";
+                lblStatusSelection.Text = LocalizationService.Get("Status_ZeroSelected");
                 return;
             }
 
@@ -638,7 +809,162 @@ namespace ZeroZip.Main
                     selSize += v.Size;
             }
 
-            lblStatusSelection.Text = $"Đã chọn: {count} mục ({FormatSize(selSize)})";
+            lblStatusSelection.Text = LocalizationService.Get("Status_SelectedItems", count, FormatSize(selSize));
+        }
+
+        private void CloseArchive()
+        {
+            _archiveExplorer.CloseArchive();
+            lvArchiveFiles.Items.Clear();
+            txtCurrentPath.Text = "\\";
+            lblStatusItems.Text = LocalizationService.Get("Status_NoArchive");
+            lblStatusSelection.Text = LocalizationService.Get("Status_ZeroSelected");
+            lblStatusFormat.Text = "";
+        }
+
+        private void LvArchiveFiles_ColumnClick(object? sender, ColumnClickEventArgs e)
+        {
+            if (e.Column == _columnSorter.SortColumn)
+            {
+                _columnSorter.Order = _columnSorter.Order == SortOrder.Ascending ? SortOrder.Descending : SortOrder.Ascending;
+            }
+            else
+            {
+                _columnSorter.SortColumn = e.Column;
+                _columnSorter.Order = SortOrder.Ascending;
+            }
+            lvArchiveFiles.Sort();
+        }
+
+        private void OnLanguageChanged()
+        {
+            if (this.IsDisposed) return;
+            if (this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(ApplyLocalization));
+            }
+            else
+            {
+                ApplyLocalization();
+            }
+        }
+
+        private void ApplyLocalization()
+        {
+            this.Text = LocalizationService.Get("App_Title");
+
+            // Menu Bar
+            if (menuFile != null) menuFile.Text = LocalizationService.Get("Menu_File");
+            if (itemOpenArchive != null) itemOpenArchive.Text = LocalizationService.Get("Menu_OpenArchive");
+            if (itemNewArchive != null) itemNewArchive.Text = LocalizationService.Get("Menu_NewArchive");
+            if (itemCloseArchive != null) itemCloseArchive.Text = LocalizationService.Get("Menu_CloseArchive");
+            if (itemExit != null) itemExit.Text = LocalizationService.Get("Menu_Exit");
+
+            if (menuCommands != null) menuCommands.Text = LocalizationService.Get("Menu_Commands");
+            if (itemAddFiles != null) itemAddFiles.Text = LocalizationService.Get("Menu_AddFiles");
+            if (itemExtractTo != null) itemExtractTo.Text = LocalizationService.Get("Menu_ExtractTo");
+            if (itemTestArchive != null) itemTestArchive.Text = LocalizationService.Get("Menu_TestArchive");
+            if (itemViewFile != null) itemViewFile.Text = LocalizationService.Get("Menu_ViewFile");
+            if (itemSelectAll != null) itemSelectAll.Text = LocalizationService.Get("Menu_SelectAll");
+
+            if (menuTools != null) menuTools.Text = LocalizationService.Get("Menu_Tools");
+            if (itemEstimate != null) itemEstimate.Text = LocalizationService.Get("Menu_Estimate");
+            if (itemShellIntegrate != null) itemShellIntegrate.Text = LocalizationService.Get("Menu_ShellIntegrate");
+
+            if (menuOptions != null) menuOptions.Text = LocalizationService.Get("Menu_Options");
+            if (itemToggleTheme != null) itemToggleTheme.Text = LocalizationService.Get("Menu_ToggleTheme");
+
+            if (menuLanguage != null) menuLanguage.Text = LocalizationService.Get("Menu_Language");
+            if (itemLangVi != null) itemLangVi.Checked = LocalizationService.CurrentLanguage == AppLanguage.Vietnamese;
+            if (itemLangEn != null) itemLangEn.Checked = LocalizationService.CurrentLanguage == AppLanguage.English;
+
+            if (menuHelp != null) menuHelp.Text = LocalizationService.Get("Menu_Help");
+            if (itemAbout != null) itemAbout.Text = LocalizationService.Get("Menu_About");
+
+            // Action Toolbar
+            if (tbBtnAdd != null) tbBtnAdd.Text = LocalizationService.Get("Btn_Add");
+            if (tbBtnOpen != null) tbBtnOpen.Text = LocalizationService.Get("Btn_Open");
+            if (tbBtnExtract != null) tbBtnExtract.Text = LocalizationService.Get("Btn_Extract");
+            if (tbBtnTest != null) tbBtnTest.Text = LocalizationService.Get("Btn_Test");
+            if (tbBtnView != null) tbBtnView.Text = LocalizationService.Get("Btn_View");
+            if (tbBtnInfo != null) tbBtnInfo.Text = LocalizationService.Get("Btn_Info");
+            if (tbBtnContextMenu != null) tbBtnContextMenu.Text = ShellContextMenuService.IsRegistered() ? LocalizationService.Get("Btn_Shell_On") : LocalizationService.Get("Btn_Shell_Off");
+            if (tbBtnLang != null) tbBtnLang.Text = LocalizationService.Get("Btn_Lang_Toggle");
+            if (btnToggleTheme != null) btnToggleTheme.Text = ZeroTheme.IsDark ? LocalizationService.Get("Btn_Theme_Light") : LocalizationService.Get("Btn_Theme_Dark");
+
+            // Tabs
+            if (tabExplorer != null) tabExplorer.Title = LocalizationService.Get("Tab_Explorer");
+            if (tabStudio != null) tabStudio.Title = LocalizationService.Get("Tab_Studio");
+            if (tabControl != null) tabControl.Invalidate();
+
+            // Path & Navigation Bar
+            if (btnUpLevel != null) btnUpLevel.Text = LocalizationService.Get("Path_Up");
+            if (btnRefresh != null) btnRefresh.Text = LocalizationService.Get("Path_Refresh");
+            if (btnOpenArchive != null) btnOpenArchive.Text = LocalizationService.Get("Path_OpenArchive");
+
+            // Grid Columns
+            if (colName != null) colName.Text = LocalizationService.Get("Col_Name");
+            if (colOrigSize != null) colOrigSize.Text = LocalizationService.Get("Col_OriginalSize");
+            if (colPackedSize != null) colPackedSize.Text = LocalizationService.Get("Col_PackedSize");
+            if (colRatio != null) colRatio.Text = LocalizationService.Get("Col_Ratio");
+            if (colMethod != null) colMethod.Text = LocalizationService.Get("Col_Method");
+            if (colModified != null) colModified.Text = LocalizationService.Get("Col_Modified");
+            if (colCrc != null) colCrc.Text = LocalizationService.Get("Col_CRC");
+            if (colType != null) colType.Text = LocalizationService.Get("Col_Type");
+            if (colAttr != null) colAttr.Text = LocalizationService.Get("Col_Attributes");
+
+            // Context Menu Items
+            if (itemCtxOpen != null) itemCtxOpen.Text = LocalizationService.Get("Menu_ViewFile");
+            if (itemCtxExtract != null) itemCtxExtract.Text = LocalizationService.Get("Menu_ExtractTo");
+            if (itemCtxCopy != null) itemCtxCopy.Text = LocalizationService.Get("Ctx_CopyPath");
+            if (itemCtxInfo != null) itemCtxInfo.Text = LocalizationService.Get("Ctx_Properties");
+            if (itemCtxOpenAnother != null) itemCtxOpenAnother.Text = LocalizationService.Get("Menu_OpenArchive");
+            if (itemCtxTest != null) itemCtxTest.Text = LocalizationService.Get("Menu_TestArchive");
+            if (itemCtxRefresh != null) itemCtxRefresh.Text = LocalizationService.Get("Path_Refresh") + " (F5)";
+            if (itemCtxSelectAll != null) itemCtxSelectAll.Text = LocalizationService.Get("Menu_SelectAll");
+
+            // Studio Cards
+            if (cardSource != null)
+            {
+                cardSource.Title = LocalizationService.Get("Studio_Card1_Title");
+                cardSource.Subtitle = LocalizationService.Get("Studio_Card1_Sub");
+            }
+            if (lblSrc != null) lblSrc.Text = LocalizationService.Get("Studio_LblSource");
+            if (btnBrowseSourceFolder != null) btnBrowseSourceFolder.Text = LocalizationService.Get("Studio_BtnBrowseFolder");
+            if (btnBrowseSourceFile != null) btnBrowseSourceFile.Text = LocalizationService.Get("Studio_BtnBrowseFile");
+            if (lblDst != null) lblDst.Text = LocalizationService.Get("Studio_LblDestSave");
+            if (btnBrowseDest != null) btnBrowseDest.Text = LocalizationService.Get("Studio_BtnBrowseDest");
+
+            if (cardEngine != null)
+            {
+                cardEngine.Title = LocalizationService.Get("Studio_Card2_Title");
+                cardEngine.Subtitle = LocalizationService.Get("Studio_Card2_Sub");
+            }
+            if (lblMethod != null) lblMethod.Text = LocalizationService.Get("Studio_LblMethod");
+            if (lblProfile != null) lblProfile.Text = LocalizationService.Get("Studio_LblProfile");
+            if (lblSplit != null) lblSplit.Text = LocalizationService.Get("Studio_LblSplit");
+
+            if (cardSecurity != null)
+            {
+                cardSecurity.Title = LocalizationService.Get("Studio_Card3_Title");
+                cardSecurity.Subtitle = LocalizationService.Get("Studio_Card3_Sub");
+            }
+            if (lblPass != null) lblPass.Text = LocalizationService.Get("Studio_LblPassword");
+
+            if (cardExec != null)
+            {
+                cardExec.Title = LocalizationService.Get("Studio_Card4_Title");
+                cardExec.Subtitle = LocalizationService.Get("Studio_Card4_Sub");
+            }
+            if (btnCompress != null) btnCompress.Text = LocalizationService.Get("Studio_BtnCompress");
+            if (btnEstimate != null) btnEstimate.Text = LocalizationService.Get("Studio_BtnEstimate");
+            if (btnCancel != null) btnCancel.Text = LocalizationService.Get("Studio_BtnCancel");
+
+            // Refresh file list if loaded
+            if (lvArchiveFiles != null && lvArchiveFiles.Items.Count > 0)
+            {
+                RefreshFileListView();
+            }
         }
 
         private async void LvArchiveFiles_DoubleClick(object? sender, EventArgs e)
@@ -838,9 +1164,12 @@ namespace ZeroZip.Main
         private void BtnToggleTheme_Click(object? sender, EventArgs e)
         {
             ZeroTheme.CurrentMode = ZeroTheme.IsDark ? ZeroThemeMode.Light : ZeroThemeMode.Dark;
-            btnToggleTheme.Text = ZeroTheme.IsDark ? "☀️ Giao diện Sáng" : "🌙 Giao diện Tối";
-            lblAppTitle.ForeColor = ZeroTheme.Colors.Primary;
-            lblAppSub.ForeColor = ZeroTheme.Colors.TextSecondary;
+            btnToggleTheme.Text = ZeroTheme.IsDark ? LocalizationService.Get("Btn_Theme_Light") : LocalizationService.Get("Btn_Theme_Dark");
+            if (menuBar != null)
+            {
+                menuBar.BackColor = ZeroTheme.Colors.Surface;
+                menuBar.ForeColor = ZeroTheme.Colors.TextPrimary;
+            }
             lvArchiveFiles.BackColor = ZeroTheme.Colors.Surface;
             lvArchiveFiles.ForeColor = ZeroTheme.Colors.TextPrimary;
             statusStripArchive.BackColor = ZeroTheme.Colors.Surface;
@@ -867,17 +1196,17 @@ namespace ZeroZip.Main
             const int cardWidth = 880;
 
             // --- Card 1: Nguồn dữ liệu & Tệp đích ---
-            var cardSource = new Card
+            cardSource = new Card
             {
-                Title = "1. Nguồn Dữ Liệu & Tệp Đích",
-                Subtitle = "Kéo thả thư mục hoặc tệp vào đây, hoặc nhấn nút chọn đường dẫn",
+                Title = LocalizationService.Get("Studio_Card1_Title"),
+                Subtitle = LocalizationService.Get("Studio_Card1_Sub"),
                 StepNumber = 1,
                 Size = new Size(cardWidth, 195),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblSrc = new Label { Text = "Nguồn (Thư mục / Tệp):", Location = new Point(14, 6), AutoSize = true };
+            lblSrc = new Label { Text = LocalizationService.Get("Studio_LblSource"), Location = new Point(14, 6), AutoSize = true };
             cardSource.ContentPanel.Controls.Add(lblSrc);
 
             txtSource = new ButtonEdit
@@ -892,7 +1221,7 @@ namespace ZeroZip.Main
 
             btnBrowseSourceFolder = new SimpleButton
             {
-                Text = "📁 Thư mục",
+                Text = LocalizationService.Get("Studio_BtnBrowseFolder"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Location = new Point(604, 26),
                 Size = new Size(115, 32)
@@ -902,7 +1231,7 @@ namespace ZeroZip.Main
 
             btnBrowseSourceFile = new SimpleButton
             {
-                Text = "📄 Tệp tin",
+                Text = LocalizationService.Get("Studio_BtnBrowseFile"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Location = new Point(727, 26),
                 Size = new Size(115, 32)
@@ -910,21 +1239,21 @@ namespace ZeroZip.Main
             btnBrowseSourceFile.Click += (s, e) => BrowseSourceFile();
             cardSource.ContentPanel.Controls.Add(btnBrowseSourceFile);
 
-            var lblDst = new Label { Text = "Lưu thành (.exe SFX / .ztar):", Location = new Point(14, 66), AutoSize = true };
+            lblDst = new Label { Text = LocalizationService.Get("Studio_LblDestSave"), Location = new Point(14, 66), AutoSize = true };
             cardSource.ContentPanel.Controls.Add(lblDst);
 
             txtDest = new ButtonEdit
             {
                 Location = new Point(14, 86),
                 Size = new Size(705, 32),
-                PlaceholderText = "Đường dẫn tệp đầu ra (.ztar hoặc .exe SFX)..."
+                PlaceholderText = "Đường dẫn tệp đầu ra (.zz, .zip hoặc .exe SFX)..."
             };
             txtDest.ButtonClick += (s, e) => BrowseDest();
             cardSource.ContentPanel.Controls.Add(txtDest);
 
             btnBrowseDest = new SimpleButton
             {
-                Text = "💾 Lưu...",
+                Text = LocalizationService.Get("Studio_BtnBrowseDest"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Location = new Point(727, 86),
                 Size = new Size(115, 32)
@@ -936,17 +1265,17 @@ namespace ZeroZip.Main
             currentY += 203;
 
             // --- Card 2: Thuật toán & Động cơ nén ZeroUniverse ---
-            var cardEngine = new Card
+            cardEngine = new Card
             {
-                Title = "2. Thuật Toán & Động Cơ Nén (ZeroUniverse)",
-                Subtitle = "Tự động nhận diện cấu trúc tệp (DataClassifier) & chọn thuật toán tối ưu",
+                Title = LocalizationService.Get("Studio_Card2_Title"),
+                Subtitle = LocalizationService.Get("Studio_Card2_Sub"),
                 StepNumber = 2,
                 Size = new Size(cardWidth, 175),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblMethod = new Label { Text = "Thuật toán nén:", Location = new Point(14, 6), AutoSize = true };
+            lblMethod = new Label { Text = LocalizationService.Get("Studio_LblMethod"), Location = new Point(14, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblMethod);
 
             cmbMethod = new ComboBoxEdit
@@ -963,7 +1292,7 @@ namespace ZeroZip.Main
             cmbMethod.SelectedIndex = 0;
             cardEngine.ContentPanel.Controls.Add(cmbMethod);
 
-            var lblProfile = new Label { Text = "Mức nén (Profile):", Location = new Point(300, 6), AutoSize = true };
+            lblProfile = new Label { Text = LocalizationService.Get("Studio_LblProfile"), Location = new Point(300, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblProfile);
 
             cmbProfile = new ComboBoxEdit
@@ -977,7 +1306,7 @@ namespace ZeroZip.Main
             cmbProfile.SelectedIndex = 2;
             cardEngine.ContentPanel.Controls.Add(cmbProfile);
 
-            var lblSplit = new Label { Text = "Cắt Volume (Split):", Location = new Point(500, 6), AutoSize = true };
+            lblSplit = new Label { Text = LocalizationService.Get("Studio_LblSplit"), Location = new Point(500, 6), AutoSize = true };
             cardEngine.ContentPanel.Controls.Add(lblSplit);
 
             cmbSplitMode = new ComboBoxEdit
@@ -1032,17 +1361,17 @@ namespace ZeroZip.Main
             currentY += 183;
 
             // --- Card 3: Bảo mật & Mã hóa ---
-            var cardSecurity = new Card
+            cardSecurity = new Card
             {
-                Title = "3. Bảo Mật & Mã Hóa Dữ Liệu",
-                Subtitle = "Mã hóa có xác thực cấp quân sự AES-256-GCM AEAD (Chống giả mạo)",
+                Title = LocalizationService.Get("Studio_Card3_Title"),
+                Subtitle = LocalizationService.Get("Studio_Card3_Sub"),
                 StepNumber = 3,
                 Size = new Size(cardWidth, 125),
                 Location = new Point(10, currentY),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            var lblPass = new Label { Text = "Mật khẩu bảo vệ (Để trống nếu không mã hóa):", Location = new Point(14, 6), AutoSize = true };
+            lblPass = new Label { Text = LocalizationService.Get("Studio_LblPassword"), Location = new Point(14, 6), AutoSize = true };
             cardSecurity.ContentPanel.Controls.Add(lblPass);
 
             txtPassword = new TextEdit
@@ -1055,7 +1384,7 @@ namespace ZeroZip.Main
             };
             cardSecurity.ContentPanel.Controls.Add(txtPassword);
 
-            var lblCryptoNotice = new Label
+            lblCryptoNotice = new Label
             {
                 Text = "🔒 Sử dụng AES-256-GCM AEAD + Key Derivation Argon2/PBKDF2.",
                 Font = new Font("Segoe UI", 8.25f, FontStyle.Regular),
@@ -1069,10 +1398,10 @@ namespace ZeroZip.Main
             currentY += 133;
 
             // --- Card 4: Thực thi & Tiến trình ---
-            var cardExec = new Card
+            cardExec = new Card
             {
-                Title = "4. Thực Thi & Giám Sát Tiến Trình",
-                Subtitle = "Khởi chạy thuật toán siêu nén hoặc kiểm tra trước tỉ lệ tiết kiệm",
+                Title = LocalizationService.Get("Studio_Card4_Title"),
+                Subtitle = LocalizationService.Get("Studio_Card4_Sub"),
                 StepNumber = 4,
                 Size = new Size(cardWidth, 175),
                 Location = new Point(10, currentY),
@@ -1162,7 +1491,7 @@ namespace ZeroZip.Main
             string ext = Path.GetExtension(path).ToLowerInvariant();
 
             // If dropped an archive or SFX, open in Archive Explorer
-            if (ext == ".exe" || ext == ".ztar")
+            if (ext == ".exe" || ext == ".zz" || ext == ".ztar")
             {
                 tabControl.SelectedIndex = 0;
                 await LoadArchiveAsync(path);
@@ -1236,7 +1565,7 @@ namespace ZeroZip.Main
                 string? dir = Path.GetDirectoryName(sourcePath);
                 string name = Path.GetFileName(sourcePath);
                 if (string.IsNullOrEmpty(name)) name = "Archive";
-                txtDest.Text = Path.Combine(dir ?? "", name + ".ztar");
+                txtDest.Text = Path.Combine(dir ?? "", name + ".zz");
             }
         }
 
@@ -1244,7 +1573,7 @@ namespace ZeroZip.Main
         {
             using var sfd = new SaveFileDialog
             {
-                Filter = "ZTar Container (*.ztar)|*.ztar|Executable SFX (*.exe)|*.exe",
+                Filter = "Kho lưu trữ ZeroZip (*.zz)|*.zz|Executable SFX (*.exe)|*.exe|Tệp nén ZIP (*.zip)|*.zip|Kho lưu trữ ZTar (*.ztar)|*.ztar",
                 Title = "Lưu file nén / SFX"
             };
             if (sfd.ShowDialog() == DialogResult.OK)
@@ -1373,8 +1702,32 @@ namespace ZeroZip.Main
                 }
 
                 var token = _cts.Token;
-                var result = await Task.Run(() =>
-                    _sfxService.BuildSfx(source, dest, splitSize, options, progress, token), token);
+                PackResult result;
+                if (dest.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    await Task.Run(() => StandardZip.CompressToZip(source, dest, progress), token);
+                    long origSize = File.Exists(source) ? new FileInfo(source).Length : 0;
+                    if (Directory.Exists(source))
+                    {
+                        foreach (var f in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+                        {
+                            try { origSize += new FileInfo(f).Length; } catch { }
+                        }
+                    }
+                    long compSize = File.Exists(dest) ? new FileInfo(dest).Length : 0;
+                    result = new PackResult
+                    {
+                        OriginalSize = origSize,
+                        CompressedSize = compSize,
+                        Method = CompressionMethod.Store,
+                    };
+                }
+                else
+                {
+                    bool isSfx = dest.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+                    result = await Task.Run(() =>
+                        _sfxService.BuildPackage(source, dest, splitSize, options, isSfx, progress, token), token);
+                }
 
                 string extra = "";
                 if (wrapZip)

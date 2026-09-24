@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using ZeroZip.Core;
@@ -17,6 +17,30 @@ namespace ZeroZip.Main.Services
         private const string StubResourceName = "ZeroZip.SfxStub";
 
         /// <summary>
+        /// Builds either a stand-alone pure archive (.zz) or a self-extracting executable (.exe).
+        /// When isSfx is false and destPath does not end in .exe, no stub executable is embedded,
+        /// ensuring file size contains only the compressed payload and footer (few KB).
+        /// </summary>
+        public PackResult BuildPackage(string sourcePath, string destPath, long splitSizeBytes,
+            CompressionOptions options, bool isSfx = false, IProgress<long>? progress = null,
+            System.Threading.CancellationToken cancel = default)
+        {
+            bool createSfx = isSfx || destPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+
+            if (!createSfx)
+            {
+                if (splitSizeBytes <= 0)
+                    return SfxComposer.BuildArchive(sourcePath, destPath, options, progress, cancel);
+                return SfxComposer.BuildArchiveMultiPart(sourcePath, destPath, splitSizeBytes, options, progress, cancel);
+            }
+
+            byte[] stub = LoadStubBytes();
+            if (splitSizeBytes <= 0)
+                return SfxComposer.BuildAppended(stub, sourcePath, destPath, options, progress, cancel);
+            return SfxComposer.BuildMultiPart(stub, sourcePath, destPath, splitSizeBytes, options, progress, cancel);
+        }
+
+        /// <summary>
         /// Creates an SFX .exe from <paramref name="sourcePath"/> using fully specified options.
         /// </summary>
         /// <param name="splitSizeBytes">0 = embed payload in the exe; &gt;0 = split into external volumes.</param>
@@ -24,12 +48,7 @@ namespace ZeroZip.Main.Services
             CompressionOptions options, IProgress<long>? progress = null,
             System.Threading.CancellationToken cancel = default)
         {
-            byte[] stub = LoadStubBytes();
-
-            if (splitSizeBytes <= 0)
-                return SfxComposer.BuildAppended(stub, sourcePath, destExePath, options, progress, cancel);
-
-            return SfxComposer.BuildMultiPart(stub, sourcePath, destExePath, splitSizeBytes, options, progress, cancel);
+            return BuildPackage(sourcePath, destExePath, splitSizeBytes, options, isSfx: true, progress, cancel);
         }
 
         /// <summary>

@@ -217,17 +217,28 @@ namespace ZeroZip.Main.Services
             if (_opType == OperationType.Compress)
             {
                 string target = _destPath ?? (Directory.Exists(_sourcePath)
-                    ? _sourcePath.TrimEnd('\\', '/') + ".ztar"
-                    : Path.ChangeExtension(_sourcePath, ".ztar"));
+                    ? _sourcePath.TrimEnd('\\', '/') + ".zz"
+                    : Path.ChangeExtension(_sourcePath, ".zz"));
+
+                if (target.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    await Task.Run(() =>
+                    {
+                        StandardZip.CompressToZip(_sourcePath, target, progress);
+                    }, _cts.Token);
+                    return;
+                }
 
                 var opts = _options ?? DataClassifier.ClassifyPath(_sourcePath).CreateOptions(CompressionProfile.Ultra);
                 opts.Password = _password ?? opts.Password;
                 opts.Workers = Environment.ProcessorCount; // High performance parallel compute
 
+                bool isSfx = target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+
                 await Task.Run(() =>
                 {
                     var builder = new SfxBuilderService();
-                    builder.BuildSfx(_sourcePath, target, 0, opts, progress, _cts.Token);
+                    builder.BuildPackage(_sourcePath, target, 0, opts, isSfx, progress, _cts.Token);
                 }, _cts.Token);
             }
             else if (_opType == OperationType.Extract)

@@ -34,12 +34,35 @@ static class Program
             ApplicationConfiguration.Initialize();
             string source = args[1];
             long split = 0;
+            string? dest = null;
+            bool isZip = false;
             for (int i = 2; i < args.Length; i++)
             {
                 if (args[i].Equals("--split", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
                     split = ParseSize(args[++i]);
                 }
+                else if ((args[i].Equals("-o", StringComparison.OrdinalIgnoreCase) || args[i].Equals("--output", StringComparison.OrdinalIgnoreCase)) && i + 1 < args.Length)
+                {
+                    dest = args[++i];
+                }
+                else if (args[i].Equals("--zip", StringComparison.OrdinalIgnoreCase) || args[i].Equals("-z", StringComparison.OrdinalIgnoreCase))
+                {
+                    isZip = true;
+                }
+            }
+
+            if (isZip && string.IsNullOrEmpty(dest))
+            {
+                string baseDir = Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".";
+                string name = Path.GetFileName(source.TrimEnd('\\', '/'));
+                dest = Path.Combine(baseDir, name + ".zip");
+            }
+            else if (string.IsNullOrEmpty(dest))
+            {
+                string baseDir = Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".";
+                string name = Path.GetFileName(source.TrimEnd('\\', '/'));
+                dest = Path.Combine(baseDir, name + ".zz");
             }
 
             long totalBytes = 0;
@@ -52,7 +75,7 @@ static class Program
                 }
             }
 
-            var dialog = new OperationProgressDialog(OperationType.Compress, source, null, null, null, totalBytes);
+            var dialog = new OperationProgressDialog(OperationType.Compress, source, dest, null, null, totalBytes);
             Application.Run(dialog);
             return dialog.IsCompleted ? 0 : 1;
         }
@@ -116,7 +139,8 @@ static class Program
         if (args.Length == 1 && (File.Exists(first) || Directory.Exists(first)))
         {
             ApplicationConfiguration.Initialize();
-            if (File.Exists(first) && (first.EndsWith(".ztar", StringComparison.OrdinalIgnoreCase) ||
+            if (File.Exists(first) && (first.EndsWith(".zz", StringComparison.OrdinalIgnoreCase) ||
+                                       first.EndsWith(".ztar", StringComparison.OrdinalIgnoreCase) ||
                                        first.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
                                        first.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)))
             {
@@ -130,10 +154,20 @@ static class Program
         }
 
         // 6. Console CLI Mode
-        AttachConsole(ATTACH_PARENT_PROCESS);
+        if (AttachConsole(ATTACH_PARENT_PROCESS))
+        {
+            try
+            {
+                var stdOut = Console.OpenStandardOutput();
+                Console.SetOut(new StreamWriter(stdOut, System.Text.Encoding.UTF8) { AutoFlush = true });
+                var stdErr = Console.OpenStandardError();
+                Console.SetError(new StreamWriter(stdErr, System.Text.Encoding.UTF8) { AutoFlush = true });
+            }
+            catch { }
+        }
+
         try
         {
-            try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { }
             return Cli.Run(args);
         }
         catch (Exception ex)

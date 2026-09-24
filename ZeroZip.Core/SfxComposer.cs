@@ -95,6 +95,73 @@ namespace ZeroZip.Core
         }
 
         /// <summary>
+        /// Builds a stand-alone pure archive (.zz) without embedding any executable stub:
+        /// <c>[ compressed payload ][ fixed footer ]</c>.
+        /// </summary>
+        public static PackResult BuildArchive(string sourcePath, string destArchivePath,
+            CompressionOptions options, IProgress<long>? progress = null,
+            System.Threading.CancellationToken cancel = default)
+        {
+            using var output = new FileStream(destArchivePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            PackResult result = ZtarEngine.Pack(sourcePath, output, options, progress, cancel);
+
+            var footer = new ZtarFooter
+            {
+                Flags = (result.Encrypted ? ZtarFlags.Encrypted : ZtarFlags.None)
+                    | (result.Precompressed ? ZtarFlags.Precompressed : ZtarFlags.None),
+                PayloadOffset = 0,
+                PayloadSize = result.CompressedSize,
+                OriginalSize = result.OriginalSize,
+                Crc32 = result.Crc32,
+                WindowLog = result.WindowLog,
+                Method = result.Method,
+                PartCount = 0,
+            };
+            footer.Write(output);
+            return result;
+        }
+
+        /// <summary>
+        /// Builds a multi-part stand-alone pure archive (.zz) without embedding any executable stub.
+        /// </summary>
+        public static PackResult BuildArchiveMultiPart(string sourcePath, string destArchivePath,
+            long splitSizeBytes, CompressionOptions options, IProgress<long>? progress = null,
+            System.Threading.CancellationToken cancel = default)
+        {
+            if (splitSizeBytes <= 0) throw new ArgumentOutOfRangeException(nameof(splitSizeBytes));
+
+            string baseName = Path.Combine(
+                Path.GetDirectoryName(destArchivePath) ?? ".",
+                Path.GetFileNameWithoutExtension(destArchivePath));
+
+            PackResult result;
+            int partCount;
+            using (var chunks = new ChunkedWriteStream(baseName, splitSizeBytes))
+            {
+                result = ZtarEngine.Pack(sourcePath, chunks, options, progress, cancel);
+                chunks.Flush();
+                partCount = chunks.PartCount;
+            }
+
+            using var output = new FileStream(destArchivePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            var footer = new ZtarFooter
+            {
+                Flags = ZtarFlags.MultiPart
+                    | (result.Encrypted ? ZtarFlags.Encrypted : ZtarFlags.None)
+                    | (result.Precompressed ? ZtarFlags.Precompressed : ZtarFlags.None),
+                PayloadOffset = 0,
+                PayloadSize = result.CompressedSize,
+                OriginalSize = result.OriginalSize,
+                Crc32 = result.Crc32,
+                WindowLog = result.WindowLog,
+                Method = result.Method,
+                PartCount = partCount,
+            };
+            footer.Write(output);
+            return result;
+        }
+
+        /// <summary>
         /// Opens the compressed payload referenced by <paramref name="footer"/>. For appended
         /// archives this is a window into <paramref name="sfxPath"/>; for multi-part it is the
         /// concatenation of the external volumes next to it.
