@@ -36,6 +36,22 @@ namespace ZeroZip.Main.Services
             ".001"
         };
 
+        /// <summary>
+        /// Builds an AQS (Advanced Query Syntax) filter that excludes all known archive extensions.
+        /// Used as AppliesTo value on *\shell\ZeroZip so the generic compression menu
+        /// does NOT appear on archive files (where SystemFileAssociations provides extraction options).
+        /// Example output: System.FileExtension:<>".zip" AND System.FileExtension:<>".7z" AND ...
+        /// </summary>
+        private static string BuildArchiveExclusionFilter()
+        {
+            var parts = new string[ArchiveExtensions.Length];
+            for (int i = 0; i < ArchiveExtensions.Length; i++)
+            {
+                parts[i] = $"System.FileExtension:<>\"{ArchiveExtensions[i]}\"";
+            }
+            return string.Join(" AND ", parts);
+        }
+
         public static bool IsRegistered()
         {
             try
@@ -113,15 +129,18 @@ namespace ZeroZip.Main.Services
 
                 // --- 1. Cascading Menu for Generic Files (*\shell\ZeroZip) ---
                 // Shows ONLY compression options for normal/uncompressed files.
+                // AppliesTo AQS filter excludes archive extensions so this menu does NOT
+                // appear when right-clicking archive files — SystemFileAssociations\{ext}\shell\ZeroZip
+                // (which includes extraction options) takes over instead.
                 // SeparatorBefore & SeparatorAfter isolate ZeroZip into its own dedicated context menu cluster.
                 using (var root = Registry.CurrentUser.CreateSubKey(FileShellKey))
                 {
                     root.DeleteValue("", throwOnMissingValue: false);
                     root.SetValue("MUIVerb", menuTitle);
                     root.SetValue("Icon", $"\"{exe}\",0");
-                    root.SetValue("SubCommands", "");
                     root.SetValue("SeparatorBefore", "");
                     root.SetValue("SeparatorAfter", "");
+                    root.SetValue("AppliesTo", BuildArchiveExclusionFilter());
 
                     using var shell = root.CreateSubKey("shell");
                     PopulateGenericCompressionSubCommands(shell, exe);
@@ -133,7 +152,6 @@ namespace ZeroZip.Main.Services
                     dirRoot.DeleteValue("", throwOnMissingValue: false);
                     dirRoot.SetValue("MUIVerb", menuTitle);
                     dirRoot.SetValue("Icon", $"\"{exe}\",0");
-                    dirRoot.SetValue("SubCommands", "");
                     dirRoot.SetValue("SeparatorBefore", "");
                     dirRoot.SetValue("SeparatorAfter", "");
 
@@ -147,7 +165,6 @@ namespace ZeroZip.Main.Services
                     bgRoot.DeleteValue("", throwOnMissingValue: false);
                     bgRoot.SetValue("MUIVerb", menuTitle);
                     bgRoot.SetValue("Icon", $"\"{exe}\",0");
-                    bgRoot.SetValue("SubCommands", "");
                     bgRoot.SetValue("SeparatorBefore", "");
                     bgRoot.SetValue("SeparatorAfter", "");
 
@@ -189,7 +206,6 @@ namespace ZeroZip.Main.Services
                         cascKey.DeleteValue("", throwOnMissingValue: false);
                         cascKey.SetValue("MUIVerb", menuTitle);
                         cascKey.SetValue("Icon", $"\"{exe}\",0");
-                        cascKey.SetValue("SubCommands", "");
                         cascKey.SetValue("SeparatorBefore", "");
                         cascKey.SetValue("SeparatorAfter", "");
 
@@ -208,7 +224,6 @@ namespace ZeroZip.Main.Services
                     sfaRoot.DeleteValue("", throwOnMissingValue: false);
                     sfaRoot.SetValue("MUIVerb", menuTitle);
                     sfaRoot.SetValue("Icon", $"\"{exe}\",0");
-                    sfaRoot.SetValue("SubCommands", "");
                     sfaRoot.SetValue("SeparatorBefore", "");
                     sfaRoot.SetValue("SeparatorAfter", "");
 
@@ -304,6 +319,17 @@ namespace ZeroZip.Main.Services
         /// </summary>
         private static void PopulateArchiveSubCommands(RegistryKey shell, string exe)
         {
+            // --- Open in Explorer ---
+            using (var c0 = shell.CreateSubKey("00_OpenArchive"))
+            {
+                string text = LocalizationService.Get("Shell_OpenArchive");
+                c0.SetValue("", text);
+                c0.SetValue("MUIVerb", text);
+                c0.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c0.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" \"%1\"");
+            }
+
             // --- Extraction commands ---
             using (var c1 = shell.CreateSubKey("01_ExtractFiles"))
             {
