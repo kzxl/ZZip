@@ -132,12 +132,14 @@ namespace ZeroZip.Main.Services
                 // AppliesTo AQS filter excludes archive extensions so this menu does NOT
                 // appear when right-clicking archive files — SystemFileAssociations\{ext}\shell\ZeroZip
                 // (which includes extraction options) takes over instead.
+                // SubCommands = "" is REQUIRED by Windows Explorer to draw the '>' cascading arrow.
                 // SeparatorBefore & SeparatorAfter isolate ZeroZip into its own dedicated context menu cluster.
                 using (var root = Registry.CurrentUser.CreateSubKey(FileShellKey))
                 {
                     root.DeleteValue("", throwOnMissingValue: false);
                     root.SetValue("MUIVerb", menuTitle);
                     root.SetValue("Icon", $"\"{exe}\",0");
+                    root.SetValue("SubCommands", "");
                     root.SetValue("SeparatorBefore", "");
                     root.SetValue("SeparatorAfter", "");
                     root.SetValue("AppliesTo", BuildArchiveExclusionFilter());
@@ -152,6 +154,7 @@ namespace ZeroZip.Main.Services
                     dirRoot.DeleteValue("", throwOnMissingValue: false);
                     dirRoot.SetValue("MUIVerb", menuTitle);
                     dirRoot.SetValue("Icon", $"\"{exe}\",0");
+                    dirRoot.SetValue("SubCommands", "");
                     dirRoot.SetValue("SeparatorBefore", "");
                     dirRoot.SetValue("SeparatorAfter", "");
 
@@ -165,6 +168,7 @@ namespace ZeroZip.Main.Services
                     bgRoot.DeleteValue("", throwOnMissingValue: false);
                     bgRoot.SetValue("MUIVerb", menuTitle);
                     bgRoot.SetValue("Icon", $"\"{exe}\",0");
+                    bgRoot.SetValue("SubCommands", "");
                     bgRoot.SetValue("SeparatorBefore", "");
                     bgRoot.SetValue("SeparatorAfter", "");
 
@@ -206,6 +210,7 @@ namespace ZeroZip.Main.Services
                         cascKey.DeleteValue("", throwOnMissingValue: false);
                         cascKey.SetValue("MUIVerb", menuTitle);
                         cascKey.SetValue("Icon", $"\"{exe}\",0");
+                        cascKey.SetValue("SubCommands", "");
                         cascKey.SetValue("SeparatorBefore", "");
                         cascKey.SetValue("SeparatorAfter", "");
 
@@ -224,10 +229,25 @@ namespace ZeroZip.Main.Services
                     sfaRoot.DeleteValue("", throwOnMissingValue: false);
                     sfaRoot.SetValue("MUIVerb", menuTitle);
                     sfaRoot.SetValue("Icon", $"\"{exe}\",0");
+                    sfaRoot.SetValue("SubCommands", "");
                     sfaRoot.SetValue("SeparatorBefore", "");
                     sfaRoot.SetValue("SeparatorAfter", "");
 
                     using var shell = sfaRoot.CreateSubKey("shell");
+                    PopulateArchiveSubCommands(shell, exe);
+                }
+
+                // --- 6. CompressedFolder ProgID for Windows default .zip handler ---
+                using (var zipProgIdRoot = Registry.CurrentUser.CreateSubKey(@"Software\Classes\CompressedFolder\shell\ZeroZip"))
+                {
+                    zipProgIdRoot.DeleteValue("", throwOnMissingValue: false);
+                    zipProgIdRoot.SetValue("MUIVerb", menuTitle);
+                    zipProgIdRoot.SetValue("Icon", $"\"{exe}\",0");
+                    zipProgIdRoot.SetValue("SubCommands", "");
+                    zipProgIdRoot.SetValue("SeparatorBefore", "");
+                    zipProgIdRoot.SetValue("SeparatorAfter", "");
+
+                    using var shell = zipProgIdRoot.CreateSubKey("shell");
                     PopulateArchiveSubCommands(shell, exe);
                 }
 
@@ -530,6 +550,8 @@ namespace ZeroZip.Main.Services
                     }
                     catch { }
                 }
+
+                Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\CompressedFolder\shell\ZeroZip", throwOnMissingSubKey: false);
 
                 NotifyShell();
                 return true;
