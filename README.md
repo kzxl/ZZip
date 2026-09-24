@@ -1,10 +1,10 @@
-# 🌌 ZeroZip — Ultra Compression & Instant SFX Packaging Studio
+﻿# 🌌 ZZip — Ultra Compression & Instant SFX Packaging Studio
 
 <p align="center">
-  <a href="https://github.com/kzxl/ZeroZip"><img src="https://img.shields.io/badge/Type-Desktop%20Application%20%26%20CLI-007ACC?style=flat-square&logo=windows" alt="Type: Desktop App & CLI" /></a>
-  <a href="https://github.com/kzxl/ZeroZip"><img src="https://img.shields.io/badge/Ecosystem-Zero%20Universe-8A2BE2?style=flat-square" alt="Ecosystem: Zero Universe" /></a>
-  <a href="https://github.com/kzxl/ZeroZip"><img src="https://img.shields.io/badge/Platform-Windows%20x64-brightgreen?style=flat-square" alt="Platform: Windows x64" /></a>
-  <a href="https://github.com/kzxl/ZeroZip"><img src="https://img.shields.io/badge/Distribution-Standalone%20Single--File-2ea44f?style=flat-square" alt="Distribution: Standalone Single-File" /></a>
+  <a href="https://github.com/kzxl/ZZip"><img src="https://img.shields.io/badge/Type-Desktop%20Application%20%26%20CLI-007ACC?style=flat-square&logo=windows" alt="Type: Desktop App & CLI" /></a>
+  <a href="https://github.com/kzxl/ZZip"><img src="https://img.shields.io/badge/Ecosystem-Zero%20Universe-8A2BE2?style=flat-square" alt="Ecosystem: Zero Universe" /></a>
+  <a href="https://github.com/kzxl/ZZip"><img src="https://img.shields.io/badge/Platform-Windows%20x64-brightgreen?style=flat-square" alt="Platform: Windows x64" /></a>
+  <a href="https://github.com/kzxl/ZZip"><img src="https://img.shields.io/badge/Distribution-Standalone%20Single--File-2ea44f?style=flat-square" alt="Distribution: Standalone Single-File" /></a>
 </p>
 
 <p align="center">
@@ -17,11 +17,11 @@
 
 ## 📖 Overview
 
-**ZeroZip** (powered by the sovereign **Ztar** engine) packages directories and files into standalone `.exe` **self-extracting archives (SFX)**. Recipients run the generated executable directly with zero setup, zero extraction dependencies, and no .NET runtime requirements.
+**ZZip** (powered by the sovereign **Ztar** engine) packages directories and files into standalone `.exe` **self-extracting archives (SFX)**. Recipients run the generated executable directly with zero setup, zero extraction dependencies, and no .NET runtime requirements.
 
-Unlike standard zip utilities, ZeroZip couples native POSIX TAR stream packaging with state-of-the-art compression algorithms (**Zstandard**, **LZMA**, **Brotli**) and authenticated **AES-256-GCM** encryption.
+Unlike standard zip utilities, ZZip couples native POSIX TAR stream packaging with state-of-the-art compression algorithms (**Zstandard**, **LZMA**, **Brotli**) and authenticated **AES-256-GCM** encryption.
 
-Part of the sovereign **ZeroUniverse** application suite, ZeroZip is engineered for developer deployments, game repacking, firmware distribution, and resilient file archives.
+Part of the sovereign **ZeroUniverse** application suite, ZZip is engineered for developer deployments, game repacking, firmware distribution, and resilient file archives.
 
 ---
 
@@ -57,7 +57,7 @@ Part of the sovereign **ZeroUniverse** application suite, ZeroZip is engineered 
 
 ## 💻 CLI Usage
 
-When executed with arguments, ZeroZip runs in headless CLI mode:
+When executed with arguments, ZZip runs in headless CLI mode:
 
 ```bash
 # Syntax

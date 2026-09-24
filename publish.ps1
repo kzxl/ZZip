@@ -1,5 +1,5 @@
-<#
-    publish.ps1 — Publish script for ZeroZip (Dual Mode: Full & Lite)
+﻿<#
+    publish.ps1 — Publish script for ZZip (Dual Mode: Full & Lite)
     Adheres to AgentOption .NET Publish Release standard & ZeroUniverse rules.
 #>
 [CmdletBinding()]
@@ -12,8 +12,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Root = if (![string]::IsNullOrEmpty($PSScriptRoot)) { $PSScriptRoot } else { (Get-Location).Path }
-$MainProj = Join-Path $Root "ZeroZip.Main\ZeroZip.Main.csproj"
-$StubProj = Join-Path $Root "ZeroZip.StubConsole\ZeroZip.StubConsole.csproj"
+$MainProj = Join-Path $Root "ZZip.Main\ZZip.Main.csproj"
+$StubProj = Join-Path $Root "ZZip.StubConsole\ZZip.StubConsole.csproj"
 $Dist = Join-Path $Root "publish"
 
 if (Test-Path $Dist) {
@@ -21,7 +21,7 @@ if (Test-Path $Dist) {
 }
 
 if ($Mode -eq 'Full' -or $Mode -eq 'All') {
-    Write-Host ">>> Publishing ZeroZip FULL (Self-Contained Single File)..." -ForegroundColor Cyan
+    Write-Host ">>> Publishing ZZip FULL (Self-Contained Single File)..." -ForegroundColor Cyan
     $outFull = Join-Path $Dist "full"
     
     # 1. Main app (GUI + CLI)
@@ -40,11 +40,11 @@ if ($Mode -eq 'Full' -or $Mode -eq 'All') {
         -o $stubFull
         
     Get-ChildItem $outFull -Filter *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
-    Write-Host "  ✔ Full build generated at: $outFull\ZeroZip.exe" -ForegroundColor Green
+    Write-Host "  ✔ Full build generated at: $outFull\ZZip.exe" -ForegroundColor Green
 }
 
 if ($Mode -eq 'Lite' -or $Mode -eq 'All') {
-    Write-Host ">>> Publishing ZeroZip LITE (Framework-Dependent Single File)..." -ForegroundColor Cyan
+    Write-Host ">>> Publishing ZZip LITE (Framework-Dependent Single File)..." -ForegroundColor Cyan
     $outLite = Join-Path $Dist "lite"
     
     # 1. Main app (GUI + CLI)
@@ -59,7 +59,7 @@ if ($Mode -eq 'Lite' -or $Mode -eq 'All') {
         -o $stubLite
         
     Get-ChildItem $outLite -Filter *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
-    Write-Host "  ✔ Lite build generated at: $outLite\ZeroZip.exe" -ForegroundColor Green
+    Write-Host "  ✔ Lite build generated at: $outLite\ZZip.exe" -ForegroundColor Green
 }
 
-Write-Host ">>> ZeroZip publish completed successfully!" -ForegroundColor Green
+Write-Host ">>> ZZip publish completed successfully!" -ForegroundColor Green

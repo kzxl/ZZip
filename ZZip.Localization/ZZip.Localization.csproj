@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZZip.Localization</RootNamespace>
+    <AssemblyName>ZZip.Localization</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Remove ZeroCompression global usings inherited from Directory.Build.props -->
+  <ItemGroup>
+    <Using Remove="ZeroCompression.Core" />
+    <Using Remove="ZeroCompression.Core.Hashing" />
+    <Using Remove="ZeroCompression.Core.Analysis" />
+    <Using Remove="ZeroCompression.Core.Buffers" />
+    <Using Remove="ZeroCompression.Core.Crypto" />
+    <Using Remove="ZeroCompression.Core.Streams" />
+  </ItemGroup>
+
+</Project>

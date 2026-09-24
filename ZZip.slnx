@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Project Path="ZZip.Core/ZZip.Core.csproj" />
+  <Project Path="ZZip.Localization/ZZip.Localization.csproj" />
+  <Project Path="ZZip.Main/ZZip.Main.csproj" />
+  <Project Path="ZZip.Stub/ZZip.Stub.csproj" />
+  <Project Path="ZZip.StubConsole/ZZip.StubConsole.csproj" />
+  <Project Path="ZZip.Tests/ZZip.Tests.csproj" />
+</Solution>
