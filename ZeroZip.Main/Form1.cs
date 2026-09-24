@@ -59,17 +59,12 @@ namespace ZeroZip.Main
         private ToolStripMenuItem menuHelp = null!;
         private ToolStripMenuItem itemAbout = null!;
 
-        // Action Toolbar
+        // Action Toolbar (Streamlined 4 Quick Actions)
         private Panel pnlWinRarToolbar = null!;
         private SimpleButton tbBtnAdd = null!;
         private SimpleButton tbBtnOpen = null!;
         private SimpleButton tbBtnExtract = null!;
         private SimpleButton tbBtnTest = null!;
-        private SimpleButton tbBtnView = null!;
-        private SimpleButton tbBtnInfo = null!;
-        private SimpleButton tbBtnContextMenu = null!;
-        private SimpleButton tbBtnLang = null!;
-        private SimpleButton btnToggleTheme = null!;
 
         // Navigation Tabs
         private TabControlEx tabControl = null!;
@@ -81,7 +76,6 @@ namespace ZeroZip.Main
         private ButtonEdit txtCurrentPath = null!;
         private SimpleButton btnUpLevel = null!;
         private SimpleButton btnRefresh = null!;
-        private SimpleButton btnOpenArchive = null!;
         private ListView lvArchiveFiles = null!;
         private ListViewColumnSorter _columnSorter = null!;
         private ColumnHeader colName = null!;
@@ -288,106 +282,50 @@ namespace ZeroZip.Main
 
             int x = 8;
             int btnHeight = 32;
-            int gap = 6;
+            int gap = 8;
 
             tbBtnAdd = new SimpleButton
             {
                 Text = LocalizationService.Get("Btn_Add"),
                 ButtonStyle = ZeroButtonStyle.Primary,
                 Location = new Point(x, 6),
-                Size = new Size(100, btnHeight)
+                Size = new Size(110, btnHeight)
             };
             tbBtnAdd.Click += (s, e) => tabControl.SelectedIndex = 1;
             pnlWinRarToolbar.Controls.Add(tbBtnAdd);
-            x += 100 + gap;
+            x += 110 + gap;
 
             tbBtnOpen = new SimpleButton
             {
                 Text = LocalizationService.Get("Btn_Open"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Location = new Point(x, 6),
-                Size = new Size(100, btnHeight)
+                Size = new Size(110, btnHeight)
             };
             tbBtnOpen.Click += (s, e) => BrowseAndOpenArchive();
             pnlWinRarToolbar.Controls.Add(tbBtnOpen);
-            x += 100 + gap;
+            x += 110 + gap;
 
             tbBtnExtract = new SimpleButton
             {
                 Text = LocalizationService.Get("Btn_Extract"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Location = new Point(x, 6),
-                Size = new Size(105, btnHeight)
+                Size = new Size(115, btnHeight)
             };
             tbBtnExtract.Click += TbBtnExtract_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnExtract);
-            x += 105 + gap;
+            x += 115 + gap;
 
             tbBtnTest = new SimpleButton
             {
                 Text = LocalizationService.Get("Btn_Test"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Location = new Point(x, 6),
-                Size = new Size(95, btnHeight)
+                Size = new Size(105, btnHeight)
             };
             tbBtnTest.Click += TbBtnTest_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnTest);
-            x += 95 + gap;
-
-            tbBtnView = new SimpleButton
-            {
-                Text = LocalizationService.Get("Btn_View"),
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(x, 6),
-                Size = new Size(95, btnHeight)
-            };
-            tbBtnView.Click += TbBtnView_Click;
-            pnlWinRarToolbar.Controls.Add(tbBtnView);
-            x += 95 + gap;
-
-            tbBtnInfo = new SimpleButton
-            {
-                Text = LocalizationService.Get("Btn_Info"),
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(x, 6),
-                Size = new Size(95, btnHeight)
-            };
-            tbBtnInfo.Click += TbBtnInfo_Click;
-            pnlWinRarToolbar.Controls.Add(tbBtnInfo);
-            x += 95 + gap;
-
-            tbBtnContextMenu = new SimpleButton
-            {
-                Text = ShellContextMenuService.IsRegistered() ? LocalizationService.Get("Btn_Shell_On") : LocalizationService.Get("Btn_Shell_Off"),
-                ButtonStyle = ZeroButtonStyle.Ghost,
-                Location = new Point(x, 6),
-                Size = new Size(150, btnHeight)
-            };
-            tbBtnContextMenu.Click += TbBtnContextMenu_Click;
-            pnlWinRarToolbar.Controls.Add(tbBtnContextMenu);
-
-            // Right side buttons
-            tbBtnLang = new SimpleButton
-            {
-                Text = LocalizationService.Get("Btn_Lang_Toggle"),
-                ButtonStyle = ZeroButtonStyle.Ghost,
-                Size = new Size(72, btnHeight),
-                Location = new Point(pnlWinRarToolbar.Width - 156, 6),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            tbBtnLang.Click += (s, e) => LocalizationService.ToggleLanguage();
-            pnlWinRarToolbar.Controls.Add(tbBtnLang);
-
-            btnToggleTheme = new SimpleButton
-            {
-                Text = ZeroTheme.IsDark ? LocalizationService.Get("Btn_Theme_Light") : LocalizationService.Get("Btn_Theme_Dark"),
-                ButtonStyle = ZeroButtonStyle.Ghost,
-                Size = new Size(72, btnHeight),
-                Location = new Point(pnlWinRarToolbar.Width - 78, 6),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnToggleTheme.Click += BtnToggleTheme_Click;
-            pnlWinRarToolbar.Controls.Add(btnToggleTheme);
         }
 
         #region Tab 1: WinRAR Archive Explorer
@@ -424,15 +362,6 @@ namespace ZeroZip.Main
                 }
             };
 
-            btnOpenArchive = new SimpleButton
-            {
-                Text = LocalizationService.Get("Path_OpenArchive"),
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Dock = DockStyle.Right,
-                Width = 95
-            };
-            btnOpenArchive.Click += (s, e) => BrowseAndOpenArchive();
-
             btnRefresh = new SimpleButton
             {
                 Text = LocalizationService.Get("Path_Refresh"),
@@ -458,7 +387,6 @@ namespace ZeroZip.Main
 
             pnlPath.Controls.Add(pnlPathCenter);
             pnlPath.Controls.Add(btnRefresh);
-            pnlPath.Controls.Add(btnOpenArchive);
             pnlPath.Controls.Add(btnUpLevel);
             pnlPathCenter.BringToFront();
 
@@ -881,16 +809,11 @@ namespace ZeroZip.Main
             if (menuHelp != null) menuHelp.Text = LocalizationService.Get("Menu_Help");
             if (itemAbout != null) itemAbout.Text = LocalizationService.Get("Menu_About");
 
-            // Action Toolbar
+            // Action Toolbar (Quick Actions)
             if (tbBtnAdd != null) tbBtnAdd.Text = LocalizationService.Get("Btn_Add");
             if (tbBtnOpen != null) tbBtnOpen.Text = LocalizationService.Get("Btn_Open");
             if (tbBtnExtract != null) tbBtnExtract.Text = LocalizationService.Get("Btn_Extract");
             if (tbBtnTest != null) tbBtnTest.Text = LocalizationService.Get("Btn_Test");
-            if (tbBtnView != null) tbBtnView.Text = LocalizationService.Get("Btn_View");
-            if (tbBtnInfo != null) tbBtnInfo.Text = LocalizationService.Get("Btn_Info");
-            if (tbBtnContextMenu != null) tbBtnContextMenu.Text = ShellContextMenuService.IsRegistered() ? LocalizationService.Get("Btn_Shell_On") : LocalizationService.Get("Btn_Shell_Off");
-            if (tbBtnLang != null) tbBtnLang.Text = LocalizationService.Get("Btn_Lang_Toggle");
-            if (btnToggleTheme != null) btnToggleTheme.Text = ZeroTheme.IsDark ? LocalizationService.Get("Btn_Theme_Light") : LocalizationService.Get("Btn_Theme_Dark");
 
             // Tabs
             if (tabExplorer != null) tabExplorer.Title = LocalizationService.Get("Tab_Explorer");
@@ -900,7 +823,6 @@ namespace ZeroZip.Main
             // Path & Navigation Bar
             if (btnUpLevel != null) btnUpLevel.Text = LocalizationService.Get("Path_Up");
             if (btnRefresh != null) btnRefresh.Text = LocalizationService.Get("Path_Refresh");
-            if (btnOpenArchive != null) btnOpenArchive.Text = LocalizationService.Get("Path_OpenArchive");
 
             // Grid Columns
             if (colName != null) colName.Text = LocalizationService.Get("Col_Name");
@@ -1143,7 +1065,6 @@ namespace ZeroZip.Main
                 if (res == DialogResult.Yes)
                 {
                     ShellContextMenuService.Unregister();
-                    tbBtnContextMenu.Text = "⚙️ Bật Menu Explorer";
                     ShowToast("Đã gỡ bỏ ZeroZip khỏi menu chuột phải Windows Explorer.", "Menu ngữ cảnh", ToastType.Info);
                 }
             }
@@ -1151,7 +1072,6 @@ namespace ZeroZip.Main
             {
                 if (ShellContextMenuService.Register())
                 {
-                    tbBtnContextMenu.Text = "✓ Đã bật Menu Explorer";
                     ShowToast("Đã đăng ký thành công ZeroZip vào menu chuột phải Windows Explorer!", "Menu ngữ cảnh", ToastType.Success);
                 }
                 else
@@ -1164,7 +1084,6 @@ namespace ZeroZip.Main
         private void BtnToggleTheme_Click(object? sender, EventArgs e)
         {
             ZeroTheme.CurrentMode = ZeroTheme.IsDark ? ZeroThemeMode.Light : ZeroThemeMode.Dark;
-            btnToggleTheme.Text = ZeroTheme.IsDark ? LocalizationService.Get("Btn_Theme_Light") : LocalizationService.Get("Btn_Theme_Dark");
             if (menuBar != null)
             {
                 menuBar.BackColor = ZeroTheme.Colors.Surface;
