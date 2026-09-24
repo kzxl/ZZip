@@ -23,6 +23,8 @@ public class LocalizationTests
     public void SetLanguage_ShouldUpdateCurrentAndNotify()
     {
         var manager = LocalizationManager.Instance;
+        manager.SetLanguage("vi");
+
         LanguageInfo? changedTo = null;
         Action<LanguageInfo> handler = lang => changedTo = lang;
 

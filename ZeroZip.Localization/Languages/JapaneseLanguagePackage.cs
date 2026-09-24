@@ -67,10 +67,15 @@ public sealed class JapaneseLanguagePackage : BaseLanguagePackage
         ["Btn_Info"] = "ℹ️ 情報",
         ["Btn_Theme_Light"] = "☀️ ライト",
         ["Btn_Theme_Dark"] = "🌙 ダーク",
+        ["Btn_Cancel"] = "キャンセル",
+        ["Btn_Close"] = "閉じる",
 
         // Tabs
         ["Tab_Explorer"] = "📁 アーカイブエクスプローラー",
         ["Tab_Studio"] = "⚡ 圧縮スタジオ",
+        ["Tab_General"] = "全般 (General)",
+        ["Tab_Advanced"] = "高度な設定 (Advanced)",
+        ["Tab_Security"] = "セキュリティ (Security)",
 
         // Path & Navigation Bar
         ["Path_Up"] = "⬆️ 上へ",
@@ -98,6 +103,8 @@ public sealed class JapaneseLanguagePackage : BaseLanguagePackage
         ["Status_ItemsSummary"] = "{0} ファイル, {1} フォルダー | 現在の場所: {2}",
         ["Status_ZeroSelected"] = "0 個の項目を選択",
         ["Status_SelectedItems"] = "{0} 個の項目を選択 ({1})",
+        ["Empty_Title"] = "アーカイブが開かれていません",
+        ["Empty_Desc"] = "圧縮ファイル（.zz、.zip、.rar、.7z）またはフォルダーをここにドラッグ＆ドロップしてください。\nまたは以下のアクションを選択してください：",
 
         // Dialogs & Messages
         ["Dialog_AddArchive_Title"] = "アーカイブへの追加 (ZeroZip)",

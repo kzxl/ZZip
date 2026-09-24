@@ -48,9 +48,12 @@ namespace ZeroZip.Main.Services
 
         public bool IsCompleted { get; private set; }
         public Exception? FailureError { get; private set; }
+        private readonly long _splitSize;
+        private readonly bool _wrapZip;
 
         public OperationProgressDialog(OperationType opType, string sourcePath, string? destPath = null,
-            CompressionOptions? options = null, string? password = null, long totalExpectedBytes = 0)
+            CompressionOptions? options = null, string? password = null, long totalExpectedBytes = 0,
+            long splitSize = 0, bool wrapZip = false)
         {
             _opType = opType;
             _sourcePath = sourcePath;
@@ -58,6 +61,8 @@ namespace ZeroZip.Main.Services
             _options = options;
             _password = password;
             _totalExpectedBytes = totalExpectedBytes;
+            _splitSize = splitSize;
+            _wrapZip = wrapZip;
 
             InitializeComponent();
         }
@@ -215,6 +220,31 @@ namespace ZeroZip.Main.Services
                 }
             }
 
+            // Pre-calculate expected size for compression progress bar
+            if (_opType == OperationType.Compress && _totalExpectedBytes <= 0)
+            {
+                if (File.Exists(_sourcePath))
+                {
+                    _totalExpectedBytes = new FileInfo(_sourcePath).Length;
+                }
+                else if (Directory.Exists(_sourcePath))
+                {
+                    await Task.Run(() =>
+                    {
+                        long sum = 0;
+                        try
+                        {
+                            foreach (var f in Directory.EnumerateFiles(_sourcePath, "*", SearchOption.AllDirectories))
+                            {
+                                try { sum += new FileInfo(f).Length; } catch { }
+                            }
+                        }
+                        catch { }
+                        _totalExpectedBytes = sum;
+                    });
+                }
+            }
+
             _stopwatch.Start();
             _lastTime = DateTime.UtcNow;
             _timer.Start();
@@ -280,7 +310,11 @@ namespace ZeroZip.Main.Services
                 await Task.Run(() =>
                 {
                     var builder = new SfxBuilderService();
-                    builder.BuildPackage(_sourcePath, target, 0, opts, isSfx, progress, _cts.Token);
+                    builder.BuildPackage(_sourcePath, target, _splitSize, opts, isSfx, progress, _cts.Token);
+                    if (_wrapZip)
+                    {
+                        builder.WrapForTransport(target);
+                    }
                 }, _cts.Token);
             }
             else if (_opType == OperationType.Extract)

@@ -88,6 +88,14 @@ namespace ZeroZip.Main
         private ToolStripStatusLabel lblStatusSelection = null!;
         private ToolStripStatusLabel lblStatusFormat = null!;
 
+        // Empty state placeholder
+        private Panel pnlEmptyState = null!;
+        private Label lblEmptyIcon = null!;
+        private Label lblEmptyTitle = null!;
+        private Label lblEmptyDesc = null!;
+        private SimpleButton btnEmptyAdd = null!;
+        private SimpleButton btnEmptyOpen = null!;
+
         public Form1(string? initialArchivePath = null, string? initialSourcePath = null, bool openStudio = false)
         {
             _initialArchivePath = initialArchivePath;
@@ -306,7 +314,7 @@ namespace ZeroZip.Main
                 Text = LocalizationService.Get("Path_Up"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Dock = DockStyle.Left,
-                Width = 72
+                Width = 80
             };
             btnUpLevel.Click += (s, e) =>
             {
@@ -321,7 +329,7 @@ namespace ZeroZip.Main
                 Text = LocalizationService.Get("Path_Refresh"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
                 Dock = DockStyle.Right,
-                Width = 85
+                Width = 105
             };
             btnRefresh.Click += (s, e) => RefreshFileListView();
 
@@ -461,6 +469,108 @@ namespace ZeroZip.Main
 
             pnlArchiveMain.Controls.Add(lvArchiveFiles);
             lvArchiveFiles.BringToFront(); // Crucial: gives lvArchiveFiles proper client bounds under pnlPath!
+
+            // Initial Empty State View (Visible when no archive loaded)
+            BuildEmptyStateView();
+        }
+
+        private void BuildEmptyStateView()
+        {
+            pnlEmptyState = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = ZeroTheme.Colors.Surface,
+                AllowDrop = true
+            };
+            pnlEmptyState.DragEnter += Form1_DragEnter;
+            pnlEmptyState.DragDrop += Form1_DragDrop;
+
+            var pnlCenter = new Panel
+            {
+                Size = new Size(560, 260),
+                BackColor = Color.Transparent
+            };
+
+            lblEmptyIcon = new Label
+            {
+                Text = "📦",
+                Font = new Font("Segoe UI Emoji", 42f, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Location = new Point(0, 0),
+                Size = new Size(560, 68),
+                BackColor = Color.Transparent
+            };
+            pnlCenter.Controls.Add(lblEmptyIcon);
+
+            lblEmptyTitle = new Label
+            {
+                Text = LocalizationService.Get("Empty_Title"),
+                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
+                ForeColor = ZeroTheme.Colors.TextPrimary,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Location = new Point(0, 72),
+                Size = new Size(560, 30),
+                BackColor = Color.Transparent
+            };
+            pnlCenter.Controls.Add(lblEmptyTitle);
+
+            lblEmptyDesc = new Label
+            {
+                Text = LocalizationService.Get("Empty_Desc"),
+                Font = new Font("Segoe UI", 9.25f, FontStyle.Regular),
+                ForeColor = ZeroTheme.Colors.TextSecondary,
+                TextAlign = ContentAlignment.TopCenter,
+                Location = new Point(0, 106),
+                Size = new Size(560, 48),
+                BackColor = Color.Transparent
+            };
+            pnlCenter.Controls.Add(lblEmptyDesc);
+
+            var pnlActions = new FlowLayoutPanel
+            {
+                Location = new Point(0, 162),
+                Size = new Size(560, 46),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent
+            };
+
+            btnEmptyAdd = new SimpleButton
+            {
+                Text = LocalizationService.Get("Btn_Add"),
+                ButtonStyle = ZeroButtonStyle.Primary,
+                Size = new Size(185, 36),
+                Margin = new Padding(85, 0, 12, 0)
+            };
+            btnEmptyAdd.Click += (s, e) => OpenAddArchiveDialog();
+            pnlActions.Controls.Add(btnEmptyAdd);
+
+            btnEmptyOpen = new SimpleButton
+            {
+                Text = LocalizationService.Get("Btn_Open"),
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Size = new Size(175, 36),
+                Margin = new Padding(0)
+            };
+            btnEmptyOpen.Click += (s, e) => BrowseAndOpenArchive();
+            pnlActions.Controls.Add(btnEmptyOpen);
+
+            pnlCenter.Controls.Add(pnlActions);
+            pnlEmptyState.Controls.Add(pnlCenter);
+
+            void CenterEmptyState()
+            {
+                pnlCenter.Location = new Point(
+                    Math.Max(10, (pnlEmptyState.ClientSize.Width - pnlCenter.Width) / 2),
+                    Math.Max(10, (pnlEmptyState.ClientSize.Height - pnlCenter.Height) / 2));
+            }
+
+            pnlEmptyState.Resize += (s, e) => CenterEmptyState();
+            CenterEmptyState();
+
+            pnlArchiveMain.Controls.Add(pnlEmptyState);
+            pnlEmptyState.BringToFront();
+            lvArchiveFiles.Visible = false;
         }
 
         private ImageList CreateImageList()
@@ -588,6 +698,8 @@ namespace ZeroZip.Main
                 }
 
                 RefreshFileListView();
+                if (pnlEmptyState != null) pnlEmptyState.Visible = false;
+                lvArchiveFiles.Visible = true;
 
                 var f = res.Footer!;
                 string enc = f.IsEncrypted ? "🔒 AES-256-GCM" : "🔓 Public";
@@ -702,6 +814,8 @@ namespace ZeroZip.Main
             lblStatusItems.Text = LocalizationService.Get("Status_NoArchive");
             lblStatusSelection.Text = LocalizationService.Get("Status_ZeroSelected");
             lblStatusFormat.Text = "";
+            if (pnlEmptyState != null) pnlEmptyState.Visible = true;
+            lvArchiveFiles.Visible = false;
         }
 
         private void LvArchiveFiles_ColumnClick(object? sender, ColumnClickEventArgs e)
@@ -808,6 +922,12 @@ namespace ZeroZip.Main
             {
                 RefreshFileListView();
             }
+
+            // Empty state placeholder
+            if (lblEmptyTitle != null) lblEmptyTitle.Text = LocalizationService.Get("Empty_Title");
+            if (lblEmptyDesc != null) lblEmptyDesc.Text = LocalizationService.Get("Empty_Desc");
+            if (btnEmptyAdd != null) btnEmptyAdd.Text = LocalizationService.Get("Btn_Add");
+            if (btnEmptyOpen != null) btnEmptyOpen.Text = LocalizationService.Get("Btn_Open");
 
             // Synchronize Windows Explorer Shell Context Menu strings if registered
             if (ShellContextMenuService.IsRegistered())
@@ -1025,6 +1145,12 @@ namespace ZeroZip.Main
             statusStripArchive.BackColor = ZeroTheme.Colors.Surface;
             statusStripArchive.ForeColor = ZeroTheme.Colors.TextSecondary;
             pnlWinRarToolbar.BackColor = ZeroTheme.Colors.Background;
+            if (pnlEmptyState != null)
+            {
+                pnlEmptyState.BackColor = ZeroTheme.Colors.Surface;
+                lblEmptyTitle.ForeColor = ZeroTheme.Colors.TextPrimary;
+                lblEmptyDesc.ForeColor = ZeroTheme.Colors.TextSecondary;
+            }
             ShowToast(ZeroTheme.IsDark ? "Đã chuyển sang giao diện Tối (Obsidian Dark)" : "Đã chuyển sang giao diện Sáng (Clean Light)", "Chủ đề", ToastType.Info);
         }
 

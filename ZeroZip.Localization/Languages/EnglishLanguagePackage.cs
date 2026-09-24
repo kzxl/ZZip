@@ -71,10 +71,15 @@ public sealed class EnglishLanguagePackage : BaseLanguagePackage
         ["Btn_Lang_Toggle"] = "🌐 VI",
         ["Btn_Theme_Light"] = "☀️ Light",
         ["Btn_Theme_Dark"] = "🌙 Dark",
+        ["Btn_Cancel"] = "Cancel",
+        ["Btn_Close"] = "Close",
 
         // Tabs
         ["Tab_Explorer"] = "📁 Archive Explorer",
         ["Tab_Studio"] = "⚡ Compression Studio",
+        ["Tab_General"] = "General",
+        ["Tab_Advanced"] = "Advanced",
+        ["Tab_Security"] = "Security",
 
         // Path & Navigation Bar
         ["Path_Up"] = "⬆️ Up",
@@ -102,6 +107,8 @@ public sealed class EnglishLanguagePackage : BaseLanguagePackage
         ["Status_ItemsSummary"] = "{0} files, {1} folders | Current folder: {2}",
         ["Status_ZeroSelected"] = "0 items selected",
         ["Status_SelectedItems"] = "{0} items selected ({1})",
+        ["Empty_Title"] = "No Archive Currently Opened",
+        ["Empty_Desc"] = "Drag and drop an archive (.zz, .zip, .rar, .7z) or folder here to browse or compress.\nOr select a quick action below:",
 
         // Studio Tab & Dialogs
         ["Studio_SourceTitle"] = "1. Source Data to Compress",

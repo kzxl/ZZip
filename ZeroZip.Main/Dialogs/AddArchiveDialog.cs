@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ZeroCompression.Core;
@@ -9,50 +8,73 @@ using ZeroCompression.Core.Analysis;
 using ZeroUI.Core.Editors;
 using ZeroUI.Core.Theme;
 using ZeroUI.WinForms.Base;
-using ZeroUI.WinForms.Containers;
 using ZeroUI.WinForms.Editors;
+using ZeroUI.WinForms.Navigation;
 using ZeroUI.WinForms.Overlays;
 using ZeroUI.WinForms.Theme;
+using TabControlEx = ZeroUI.WinForms.Navigation.TabControlEx;
+using TabPageEx = ZeroUI.WinForms.Navigation.TabPageEx;
+using TabStyle = ZeroUI.WinForms.Navigation.TabStyle;
 using ZeroZip.Core;
+using ZeroZip.Localization;
 using ZeroZip.Main.Services;
 
 namespace ZeroZip.Main.Dialogs
 {
     /// <summary>
-    /// Dedicated "Add to Archive" configuration dialog (WinRAR & 7-Zip style).
-    /// Allows users to specify source data, destination archive name (.zz, .zip, .exe),
-    /// compression algorithm, dictionary window, split volumes, and AES-256-GCM encryption.
+    /// Optimized "Add to Archive" configuration dialog (WinRAR & 7-Zip standard).
+    /// Features a compact tabbed design (General, Advanced, Security) with zero scrolling
+    /// and delegates active compression tracking to OperationProgressDialog.
     /// </summary>
     public class AddArchiveDialog : BaseForm
     {
         private readonly string? _initialSource;
         private readonly SfxBuilderService _sfxService;
-        private CancellationTokenSource? _cts;
 
-        // UI Controls
-        private Card cardSource = null!;
-        private Card cardEngine = null!;
-        private Card cardSecurity = null!;
+        // UI Controls - Tabs
+        private TabControlEx tabs = null!;
+        private TabPageEx pageGeneral = null!;
+        private TabPageEx pageAdvanced = null!;
+        private TabPageEx pageSecurity = null!;
+
+        // Tab 1: General
+        private Label lblSrc = null!;
         private ButtonEdit txtSource = null!;
         private SimpleButton btnBrowseFolder = null!;
         private SimpleButton btnBrowseFile = null!;
+        private Label lblDst = null!;
         private ButtonEdit txtDest = null!;
         private SimpleButton btnBrowseDest = null!;
+        private Label lblMethod = null!;
         private ComboBoxEdit cmbMethod = null!;
+        private Label lblProfile = null!;
         private ComboBoxEdit cmbProfile = null!;
+        private Label lblSplit = null!;
         private ComboBoxEdit cmbSplit = null!;
+        private Panel pnlBadge = null!;
+        private Label lblAutoDetectBadge = null!;
+
+        // Tab 2: Advanced
         private CheckEdit chkWrapZip = null!;
         private CheckEdit chkPrecomp = null!;
         private CheckEdit chkLong = null!;
-        private Label lblAutoDetectBadge = null!;
+        private Panel pnlEst = null!;
+        private SimpleButton btnEstimateTab = null!;
+        private Label lblEstInfo = null!;
+
+        // Tab 3: Security
+        private Label lblPass = null!;
         private TextEdit txtPassword = null!;
-        private ProgressBarControl progressBar = null!;
-        private Label lblStatus = null!;
+        private Panel pnlSecInfo = null!;
+        private Label lblSecTitle = null!;
+        private Label lblSecBody = null!;
+
+        // Bottom Bar
+        private Panel pnlBottomBar = null!;
+        private Label lblEngineBrand = null!;
         private SimpleButton btnEstimate = null!;
         private SimpleButton btnStart = null!;
         private SimpleButton btnCancel = null!;
-
-        private Card cardAction = null!;
 
         public string? ResultArchivePath { get; private set; }
         public bool IsSuccess { get; private set; }
@@ -76,287 +98,16 @@ namespace ZeroZip.Main.Dialogs
         private void InitializeComponent()
         {
             this.Text = LocalizationService.Get("Dialog_AddArchive_Title");
-            this.Size = new Size(840, 800);
-            this.MinimumSize = new Size(780, 650);
+            this.Size = new Size(740, 430);
+            this.MinimumSize = new Size(700, 400);
             this.StartPosition = FormStartPosition.CenterParent;
             this.MaximizeBox = false;
 
-            var pnlScroll = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                Padding = new Padding(12)
-            };
-
-            int currentY = 10;
-            const int cardWidth = 790;
-
-            // --- Card 1: Nguồn & Tệp đích ---
-            cardSource = new Card
-            {
-                Title = LocalizationService.Get("Studio_Card1_Title"),
-                Subtitle = LocalizationService.Get("Studio_Card1_Sub"),
-                StepNumber = 1,
-                AutoFitContent = false,
-                Size = new Size(cardWidth, 195),
-                Location = new Point(12, currentY),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            var lblSrc = new Label { Text = LocalizationService.Get("Studio_LblSource"), Location = new Point(14, 6), AutoSize = true };
-            cardSource.ContentPanel.Controls.Add(lblSrc);
-
-            txtSource = new ButtonEdit
-            {
-                Location = new Point(14, 26),
-                Size = new Size(525, 32),
-                PlaceholderText = "Chọn hoặc kéo thả thư mục / tệp cần nén..."
-            };
-            txtSource.ButtonClick += (s, e) => BrowseSourceFolder();
-            txtSource.TextChanged += (s, e) => AutoDetectAndTune(txtSource.Text);
-            cardSource.ContentPanel.Controls.Add(txtSource);
-
-            btnBrowseFolder = new SimpleButton
-            {
-                Text = LocalizationService.Get("Studio_BtnBrowseFolder"),
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(545, 26),
-                Size = new Size(115, 32)
-            };
-            btnBrowseFolder.Click += (s, e) => BrowseSourceFolder();
-            cardSource.ContentPanel.Controls.Add(btnBrowseFolder);
-
-            btnBrowseFile = new SimpleButton
-            {
-                Text = LocalizationService.Get("Studio_BtnBrowseFile"),
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(666, 26),
-                Size = new Size(105, 32)
-            };
-            btnBrowseFile.Click += (s, e) => BrowseSourceFile();
-            cardSource.ContentPanel.Controls.Add(btnBrowseFile);
-
-            var lblDst = new Label { Text = LocalizationService.Get("Studio_LblDestSave"), Location = new Point(14, 66), AutoSize = true };
-            cardSource.ContentPanel.Controls.Add(lblDst);
-
-            txtDest = new ButtonEdit
-            {
-                Location = new Point(14, 86),
-                Size = new Size(645, 32),
-                PlaceholderText = "Đường dẫn kho lưu trữ (.zz, .zip hoặc .exe SFX)..."
-            };
-            txtDest.ButtonClick += (s, e) => BrowseDest();
-            cardSource.ContentPanel.Controls.Add(txtDest);
-
-            btnBrowseDest = new SimpleButton
-            {
-                Text = LocalizationService.Get("Studio_BtnBrowseDest"),
-                ButtonStyle = ZeroButtonStyle.Secondary,
-                Location = new Point(666, 86),
-                Size = new Size(105, 32)
-            };
-            btnBrowseDest.Click += (s, e) => BrowseDest();
-            cardSource.ContentPanel.Controls.Add(btnBrowseDest);
-
-            pnlScroll.Controls.Add(cardSource);
-
-            // --- Card 2: Thuật toán & Cấu hình nén ZeroUniverse ---
-            cardEngine = new Card
-            {
-                Title = LocalizationService.Get("Studio_Card2_Title"),
-                Subtitle = LocalizationService.Get("Studio_Card2_Sub"),
-                StepNumber = 2,
-                AutoFitContent = false,
-                Size = new Size(cardWidth, 248),
-                Location = new Point(12, 215),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            var lblMethod = new Label { Text = LocalizationService.Get("Studio_LblMethod"), Location = new Point(14, 6), AutoSize = true };
-            cardEngine.ContentPanel.Controls.Add(lblMethod);
-
-            cmbMethod = new ComboBoxEdit
-            {
-                Location = new Point(14, 26),
-                Size = new Size(260, 32)
-            };
-            cmbMethod.Items.Add("⭐ Tự động nhận diện (Adaptive Auto-Detect)");
-            cmbMethod.Items.Add("Zstandard (Nhanh, đa luồng, GB/s)");
-            cmbMethod.Items.Add("LZMA (Nén sâu nhất)");
-            cmbMethod.Items.Add("Brotli (Văn bản / Web / Code)");
-            cmbMethod.Items.Add("Không nén (Store)");
-            cmbMethod.Items.Add("ZeroTelemetry (Gorilla XOR)");
-            cmbMethod.SelectedIndex = 0;
-            cardEngine.ContentPanel.Controls.Add(cmbMethod);
-
-            var lblProfile = new Label { Text = LocalizationService.Get("Studio_LblProfile"), Location = new Point(285, 6), AutoSize = true };
-            cardEngine.ContentPanel.Controls.Add(lblProfile);
-
-            cmbProfile = new ComboBoxEdit
-            {
-                Location = new Point(285, 26),
-                Size = new Size(180, 32)
-            };
-            cmbProfile.Items.Add("Nhanh (Fast)");
-            cmbProfile.Items.Add("Cân bằng (Normal)");
-            cmbProfile.Items.Add("Siêu nén (Ultra)");
-            cmbProfile.SelectedIndex = 2;
-            cardEngine.ContentPanel.Controls.Add(cmbProfile);
-
-            var lblSplit = new Label { Text = LocalizationService.Get("Studio_LblSplit"), Location = new Point(475, 6), AutoSize = true };
-            cardEngine.ContentPanel.Controls.Add(lblSplit);
-
-            cmbSplit = new ComboBoxEdit
-            {
-                Location = new Point(475, 26),
-                Size = new Size(295, 32)
-            };
-            cmbSplit.Items.Add("Nhúng trực tiếp (1 tệp)");
-            cmbSplit.Items.Add("Cắt mảnh 2GB (FAT32 an toàn)");
-            cmbSplit.Items.Add("Cắt mảnh 4GB (Tiêu chuẩn ISO)");
-            cmbSplit.SelectedIndex = 0;
-            cardEngine.ContentPanel.Controls.Add(cmbSplit);
-
-            // Row 2a: Checkboxes 1 & 2 (Clean 2-row layout prevents text truncation)
-            chkWrapZip = new CheckEdit
-            {
-                Text = "Bọc ZIP bảo vệ (gửi qua mail/web)",
-                Location = new Point(14, 68),
-                Size = new Size(345, 24)
-            };
-            cardEngine.ContentPanel.Controls.Add(chkWrapZip);
-
-            bool precompOk = _sfxService.IsPrecompAvailable();
-            chkPrecomp = new CheckEdit
-            {
-                Text = precompOk ? "Nén sâu repack (precomp cho ảnh/game)" : "Nén repack (chưa có precomp.exe)",
-                Location = new Point(370, 68),
-                Size = new Size(390, 24),
-                Enabled = precompOk
-            };
-            cardEngine.ContentPanel.Controls.Add(chkPrecomp);
-
-            // Row 2b: Checkbox 3
-            chkLong = new CheckEdit
-            {
-                Text = "Khử trùng lặp khoảng cách xa (Zstd LDM 2GB)",
-                Location = new Point(14, 96),
-                Size = new Size(420, 24)
-            };
-            cardEngine.ContentPanel.Controls.Add(chkLong);
-
-            // Row 3: Elegant styled recommendation banner
-            var pnlBadge = new Panel
-            {
-                Location = new Point(14, 126),
-                Size = new Size(cardWidth - 45, 46),
-                BackColor = ZeroTheme.IsDark ? Color.FromArgb(30, 38, 54) : Color.FromArgb(242, 246, 255),
-                Padding = new Padding(10, 4, 10, 4),
-                Margin = new Padding(0, 0, 0, 16),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            ZeroTheme.ThemeChanged += (s, e) =>
-            {
-                if (!pnlBadge.IsDisposed)
-                {
-                    pnlBadge.BackColor = ZeroTheme.IsDark ? Color.FromArgb(30, 38, 54) : Color.FromArgb(242, 246, 255);
-                }
-            };
-
-            lblAutoDetectBadge = new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = "💡 Chưa nạp dữ liệu phân tích.",
-                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-                ForeColor = ZeroTheme.Colors.Primary,
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoEllipsis = true
-            };
-            pnlBadge.Controls.Add(lblAutoDetectBadge);
-            cardEngine.ContentPanel.Controls.Add(pnlBadge);
-
-            pnlScroll.Controls.Add(cardEngine);
-
-            // --- Card 3: Bảo mật & Mã hóa ---
-            cardSecurity = new Card
-            {
-                Title = LocalizationService.Get("Studio_Card3_Title"),
-                Subtitle = LocalizationService.Get("Studio_Card3_Sub"),
-                StepNumber = 3,
-                AutoFitContent = false,
-                Size = new Size(cardWidth, 185),
-                Location = new Point(12, 473),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            var lblPass = new Label { Text = LocalizationService.Get("Studio_LblPassword"), Location = new Point(14, 6), AutoSize = true };
-            cardSecurity.ContentPanel.Controls.Add(lblPass);
-
-            txtPassword = new TextEdit
-            {
-                Location = new Point(14, 26),
-                Size = new Size(500, 32),
-                PlaceholderText = "Mật khẩu mã hóa (tùy chọn)...",
-                UseSystemPasswordChar = true,
-                ShowPasswordEyeButton = true
-            };
-            cardSecurity.ContentPanel.Controls.Add(txtPassword);
-
-            var lblCryptoNotice = new Label
-            {
-                Text = "🔒 Mã hóa có xác thực chuẩn quân sự AES-256-GCM AEAD (Chống giả mạo dữ liệu).",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
-                ForeColor = ZeroTheme.Colors.TextSecondary,
-                Location = new Point(14, 68),
-                Size = new Size(cardWidth - 45, 22),
-                Margin = new Padding(0, 0, 0, 18),
-                AutoEllipsis = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            cardSecurity.ContentPanel.Controls.Add(lblCryptoNotice);
-
-            pnlScroll.Controls.Add(cardSecurity);
-
-            // --- Card 4: Thực thi & Tiến trình ---
-            cardAction = new Card
-            {
-                Title = LocalizationService.Get("Studio_Card4_Title"),
-                Subtitle = LocalizationService.Get("Studio_Card4_Sub"),
-                StepNumber = 4,
-                AutoFitContent = false,
-                Size = new Size(cardWidth, 145),
-                Location = new Point(12, 658),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            progressBar = new ProgressBarControl
-            {
-                Location = new Point(14, 12),
-                Size = new Size(cardWidth - 45, 24),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            cardAction.ContentPanel.Controls.Add(progressBar);
-
-            lblStatus = new Label
-            {
-                Text = "Sẵn sàng thực hiện.",
-                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-                Location = new Point(14, 46),
-                Size = new Size(cardWidth - 45, 22),
-                Margin = new Padding(0, 0, 0, 18),
-                ForeColor = ZeroTheme.Colors.TextSecondary,
-                AutoEllipsis = true,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            cardAction.ContentPanel.Controls.Add(lblStatus);
-
-            pnlScroll.Controls.Add(cardAction);
-
-            // --- Pinned Bottom Action Bar (WinRAR & 7-Zip Standard) ---
-            var pnlBottomBar = new Panel
+            // --- 1. Pinned Bottom Action Bar ---
+            pnlBottomBar = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 60,
+                Height = 54,
                 BackColor = ZeroTheme.Colors.Surface,
                 Padding = new Padding(16, 8, 16, 8)
             };
@@ -365,23 +116,14 @@ namespace ZeroZip.Main.Dialogs
                 using var pen = new Pen(ZeroTheme.Colors.Border, 1);
                 e.Graphics.DrawLine(pen, 0, 0, pnlBottomBar.Width, 0);
             };
-            ZeroTheme.ThemeChanged += (s, e) =>
-            {
-                if (!pnlBottomBar.IsDisposed)
-                {
-                    pnlBottomBar.BackColor = ZeroTheme.Colors.Surface;
-                    pnlBottomBar.Invalidate();
-                }
-            };
 
-            var lblEngineBrand = new Label
+            lblEngineBrand = new Label
             {
                 Dock = DockStyle.Left,
                 Text = "⚡ Powered by ZeroUniverse Sovereign Codecs",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
+                Font = new Font("Segoe UI", 9f, FontStyle.Italic),
                 ForeColor = ZeroTheme.Colors.TextSecondary,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0),
                 AutoSize = true
             };
             pnlBottomBar.Controls.Add(lblEngineBrand);
@@ -392,112 +134,382 @@ namespace ZeroZip.Main.Dialogs
                 FlowDirection = FlowDirection.LeftToRight,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(0, 4, 8, 4),
-                WrapContents = false
+                WrapContents = false,
+                Padding = new Padding(0, 2, 0, 2)
             };
-
-            btnStart = new SimpleButton
-            {
-                Text = LocalizationService.Get("Studio_BtnCompress"),
-                ButtonStyle = ZeroButtonStyle.Primary,
-                Size = new Size(170, 38),
-                Margin = new Padding(0, 0, 8, 0)
-            };
-            btnStart.Click += BtnStart_Click;
-            pnlButtons.Controls.Add(btnStart);
 
             btnEstimate = new SimpleButton
             {
                 Text = LocalizationService.Get("Studio_BtnEstimate"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(150, 38),
+                Size = new Size(130, 34),
                 Margin = new Padding(0, 0, 8, 0)
             };
             btnEstimate.Click += BtnEstimate_Click;
             pnlButtons.Controls.Add(btnEstimate);
 
+            btnStart = new SimpleButton
+            {
+                Text = LocalizationService.Get("Studio_BtnCompress"),
+                ButtonStyle = ZeroButtonStyle.Primary,
+                Size = new Size(140, 34),
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            btnStart.Click += BtnStart_Click;
+            pnlButtons.Controls.Add(btnStart);
+
             btnCancel = new SimpleButton
             {
-                Text = "Đóng",
+                Text = LocalizationService.Get("Btn_Cancel"),
                 ButtonStyle = ZeroButtonStyle.Secondary,
-                Size = new Size(95, 38),
+                Size = new Size(88, 34),
                 Margin = new Padding(0)
             };
             btnCancel.Click += (s, e) =>
             {
-                if (_cts != null && !_cts.IsCancellationRequested)
-                {
-                    _cts.Cancel();
-                    lblStatus.Text = "Đang hủy...";
-                }
-                else
-                {
-                    this.DialogResult = DialogResult.Cancel;
-                    this.Close();
-                }
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
             };
             pnlButtons.Controls.Add(btnCancel);
 
             pnlBottomBar.Controls.Add(pnlButtons);
 
-            // Correct docking order: Bottom docked control added, then Fill docked control added and brought to front
-            this.Controls.Add(pnlBottomBar);
-            this.Controls.Add(pnlScroll);
-            pnlScroll.BringToFront();
-
-            // Flow layout updater: automatically stacks all cards without overlapping
-            void UpdateCardsLayout()
+            // --- 2. Tab Control ---
+            tabs = new TabControlEx
             {
-                int y = 10;
-                int pad = 12;
-                int effectiveWidth = Math.Max(730, pnlScroll.ClientSize.Width - (pad * 2));
+                Dock = DockStyle.Fill,
+                TabStyle = TabStyle.Underline,
+                TabHeight = 38,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular)
+            };
 
-                Card[] cards = [cardSource, cardEngine, cardSecurity, cardAction];
-                foreach (var card in cards)
-                {
-                    if (card == null) continue;
-                    card.Location = new Point(pad, y);
-                    card.Width = effectiveWidth;
-                    y += card.Height + 14;
-                }
+            // ==================== TAB 1: CHUNG (GENERAL) ====================
+            pageGeneral = new TabPageEx
+            {
+                Title = LocalizationService.Get("Tab_General", "Chung (General)"),
+                Padding = new Padding(16, 12, 16, 12),
+                BackColor = ZeroTheme.Colors.Surface
+            };
 
-                pnlScroll.AutoScrollMinSize = new Size(0, y + 10);
-            }
+            lblSrc = new Label
+            {
+                Text = LocalizationService.Get("Studio_LblSource", "Tập tin / Thư mục cần nén:"),
+                Location = new Point(14, 10),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular)
+            };
+            pageGeneral.Controls.Add(lblSrc);
 
-            pnlScroll.Resize += (s, e) => UpdateCardsLayout();
-            this.Shown += (s, e) => UpdateCardsLayout();
-            UpdateCardsLayout();
+            txtSource = new ButtonEdit
+            {
+                Location = new Point(14, 32),
+                Size = new Size(465, 32),
+                PlaceholderText = "Chọn hoặc kéo thả thư mục / tệp cần nén..."
+            };
+            txtSource.ButtonClick += (s, e) => BrowseSourceFolder();
+            txtSource.TextChanged += (s, e) => AutoDetectAndTune(txtSource.Text);
+            pageGeneral.Controls.Add(txtSource);
+
+            btnBrowseFolder = new SimpleButton
+            {
+                Text = LocalizationService.Get("Studio_BtnBrowseFolder", "Thư mục..."),
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Location = new Point(487, 32),
+                Size = new Size(100, 32)
+            };
+            btnBrowseFolder.Click += (s, e) => BrowseSourceFolder();
+            pageGeneral.Controls.Add(btnBrowseFolder);
+
+            btnBrowseFile = new SimpleButton
+            {
+                Text = LocalizationService.Get("Studio_BtnBrowseFile", "Tập tin..."),
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Location = new Point(593, 32),
+                Size = new Size(95, 32)
+            };
+            btnBrowseFile.Click += (s, e) => BrowseSourceFile();
+            pageGeneral.Controls.Add(btnBrowseFile);
+
+            lblDst = new Label
+            {
+                Text = LocalizationService.Get("Studio_LblDestSave", "Tên tập tin đích (.zz, .zip, .exe):"),
+                Location = new Point(14, 72),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular)
+            };
+            pageGeneral.Controls.Add(lblDst);
+
+            txtDest = new ButtonEdit
+            {
+                Location = new Point(14, 94),
+                Size = new Size(573, 32),
+                PlaceholderText = "Đường dẫn kho lưu trữ đích..."
+            };
+            txtDest.ButtonClick += (s, e) => BrowseDest();
+            pageGeneral.Controls.Add(txtDest);
+
+            btnBrowseDest = new SimpleButton
+            {
+                Text = LocalizationService.Get("Studio_BtnBrowseDest", "Duyệt..."),
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Location = new Point(593, 94),
+                Size = new Size(95, 32)
+            };
+            btnBrowseDest.Click += (s, e) => BrowseDest();
+            pageGeneral.Controls.Add(btnBrowseDest);
+
+            lblMethod = new Label
+            {
+                Text = LocalizationService.Get("Studio_LblMethod", "Thuật toán chính:"),
+                Location = new Point(14, 134),
+                AutoSize = true
+            };
+            pageGeneral.Controls.Add(lblMethod);
+
+            cmbMethod = new ComboBoxEdit
+            {
+                Location = new Point(14, 154),
+                Size = new Size(220, 32)
+            };
+            cmbMethod.Items.Add("⭐ Tự động (Adaptive)");
+            cmbMethod.Items.Add("Zstandard (Nhanh, đa luồng)");
+            cmbMethod.Items.Add("LZMA (Nén sâu nhất)");
+            cmbMethod.Items.Add("Brotli (Web / Mã nguồn)");
+            cmbMethod.Items.Add("Không nén (Store)");
+            cmbMethod.Items.Add("ZeroTelemetry (Gorilla XOR)");
+            cmbMethod.SelectedIndex = 0;
+            pageGeneral.Controls.Add(cmbMethod);
+
+            lblProfile = new Label
+            {
+                Text = LocalizationService.Get("Studio_LblProfile", "Mức độ nén:"),
+                Location = new Point(244, 134),
+                AutoSize = true
+            };
+            pageGeneral.Controls.Add(lblProfile);
+
+            cmbProfile = new ComboBoxEdit
+            {
+                Location = new Point(244, 154),
+                Size = new Size(195, 32)
+            };
+            cmbProfile.Items.Add("Nhanh (Fast)");
+            cmbProfile.Items.Add("Cân bằng (Normal)");
+            cmbProfile.Items.Add("Siêu nén (Ultra)");
+            cmbProfile.SelectedIndex = 2;
+            pageGeneral.Controls.Add(cmbProfile);
+
+            lblSplit = new Label
+            {
+                Text = LocalizationService.Get("Studio_LblSplit", "Chia nhỏ khối lượng:"),
+                Location = new Point(450, 134),
+                AutoSize = true
+            };
+            pageGeneral.Controls.Add(lblSplit);
+
+            cmbSplit = new ComboBoxEdit
+            {
+                Location = new Point(450, 154),
+                Size = new Size(238, 32)
+            };
+            cmbSplit.Items.Add("Không chia (1 tệp duy nhất)");
+            cmbSplit.Items.Add("2GB (Giới hạn FAT32)");
+            cmbSplit.Items.Add("4GB (Tiêu chuẩn ISO)");
+            cmbSplit.SelectedIndex = 0;
+            pageGeneral.Controls.Add(cmbSplit);
+
+            pnlBadge = new Panel
+            {
+                Location = new Point(14, 202),
+                Size = new Size(674, 46),
+                BackColor = ZeroTheme.IsDark ? Color.FromArgb(30, 38, 54) : Color.FromArgb(242, 246, 255),
+                Padding = new Padding(12, 6, 12, 6)
+            };
+
+            lblAutoDetectBadge = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "💡 Nhận diện dữ liệu: Đang sẵn sàng...",
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                ForeColor = ZeroTheme.Colors.Primary,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
+            };
+            pnlBadge.Controls.Add(lblAutoDetectBadge);
+            pageGeneral.Controls.Add(pnlBadge);
+
+            // ==================== TAB 2: NÂNG CAO (ADVANCED) ====================
+            pageAdvanced = new TabPageEx
+            {
+                Title = LocalizationService.Get("Tab_Advanced", "Nâng cao (Advanced)"),
+                Padding = new Padding(16, 16, 16, 16),
+                BackColor = ZeroTheme.Colors.Surface
+            };
+
+            chkWrapZip = new CheckEdit
+            {
+                Text = "Bọc ZIP bảo vệ (gửi qua email hoặc tải lên web an toàn, không bị tường lửa chặn)",
+                Location = new Point(16, 14),
+                Size = new Size(650, 24)
+            };
+            pageAdvanced.Controls.Add(chkWrapZip);
+
+            bool precompOk = _sfxService.IsPrecompAvailable();
+            chkPrecomp = new CheckEdit
+            {
+                Text = precompOk ? "Nén sâu repack (precomp cho ảnh JPEG, luồng deflate và tài nguyên game)" : "Nén repack (chưa phát hiện precomp.exe)",
+                Location = new Point(16, 44),
+                Size = new Size(650, 24),
+                Enabled = precompOk
+            };
+            pageAdvanced.Controls.Add(chkPrecomp);
+
+            chkLong = new CheckEdit
+            {
+                Text = "Khử trùng lặp khoảng cách xa (Zstandard Long Distance Matching cửa sổ 2GB)",
+                Location = new Point(16, 74),
+                Size = new Size(650, 24)
+            };
+            pageAdvanced.Controls.Add(chkLong);
+
+            pnlEst = new Panel
+            {
+                Location = new Point(16, 114),
+                Size = new Size(672, 120),
+                BackColor = ZeroTheme.Colors.Surface,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(14)
+            };
+
+            btnEstimateTab = new SimpleButton
+            {
+                Text = "Ước tính tỉ lệ nén",
+                ButtonStyle = ZeroButtonStyle.Secondary,
+                Location = new Point(14, 12),
+                Size = new Size(150, 32)
+            };
+            btnEstimateTab.Click += BtnEstimate_Click;
+            pnlEst.Controls.Add(btnEstimateTab);
+
+            lblEstInfo = new Label
+            {
+                Text = "ZeroZip sẽ lấy mẫu ngẫu nhiên 64MB đầu tiên của tập dữ liệu để ước tính dung lượng và thời gian thực thi mà không làm thay đổi tệp gốc.",
+                Location = new Point(14, 52),
+                Size = new Size(640, 56),
+                ForeColor = ZeroTheme.Colors.TextSecondary,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular)
+            };
+            pnlEst.Controls.Add(lblEstInfo);
+            pageAdvanced.Controls.Add(pnlEst);
+
+            // ==================== TAB 3: BẢO MẬT (SECURITY) ====================
+            pageSecurity = new TabPageEx
+            {
+                Title = LocalizationService.Get("Tab_Security", "Bảo mật (Security)"),
+                Padding = new Padding(16, 16, 16, 16),
+                BackColor = ZeroTheme.Colors.Surface
+            };
+
+            lblPass = new Label
+            {
+                Text = LocalizationService.Get("Studio_LblPassword", "Mật khẩu bảo vệ kho lưu trữ (tùy chọn):"),
+                Location = new Point(16, 14),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular)
+            };
+            pageSecurity.Controls.Add(lblPass);
+
+            txtPassword = new TextEdit
+            {
+                Location = new Point(16, 36),
+                Size = new Size(480, 32),
+                PlaceholderText = "Nhập mật khẩu mã hóa...",
+                UseSystemPasswordChar = true,
+                ShowPasswordEyeButton = true
+            };
+            pageSecurity.Controls.Add(txtPassword);
+
+            pnlSecInfo = new Panel
+            {
+                Location = new Point(16, 82),
+                Size = new Size(672, 135),
+                BackColor = ZeroTheme.Colors.Surface,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(16)
+            };
+
+            lblSecTitle = new Label
+            {
+                Text = "🛡️ Chuẩn Mã Hóa Quân Sự AES-256-GCM AEAD",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = ZeroTheme.Colors.Primary,
+                Location = new Point(14, 12),
+                AutoSize = true
+            };
+            pnlSecInfo.Controls.Add(lblSecTitle);
+
+            lblSecBody = new Label
+            {
+                Text = "Toàn bộ khối dữ liệu nén được bảo vệ bằng chuẩn mã hóa có xác thực AES-256-GCM.\n" +
+                       "• Thuật toán xác thực GMAC 128-bit phát hiện tức thì nếu file bị hỏng hoặc cố ý chỉnh sửa.\n" +
+                       "• Bảo mật tuyệt đối trước các cuộc tấn công brute-force và padding-oracle.\n" +
+                       "• Bỏ trống mật khẩu nếu muốn tạo kho lưu trữ tiêu chuẩn truy cập tự do.",
+                Location = new Point(14, 40),
+                Size = new Size(640, 80),
+                ForeColor = ZeroTheme.Colors.TextSecondary,
+                Font = new Font("Segoe UI", 8.75f, FontStyle.Regular)
+            };
+            pnlSecInfo.Controls.Add(lblSecBody);
+            pageSecurity.Controls.Add(pnlSecInfo);
+
+            // Mount Tabs into TabControlEx
+            tabs.AddTab(pageGeneral);
+            tabs.AddTab(pageAdvanced);
+            tabs.AddTab(pageSecurity);
+
+            // Correct docking order: Bottom docked panel added first, then Fill docked tab control
+            this.Controls.Add(tabs);
+            this.Controls.Add(pnlBottomBar);
+
+            // Theme support
+            ZeroTheme.ThemeChanged += OnThemeChanged;
+        }
+
+        private void OnThemeChanged(object? sender, EventArgs e)
+        {
+            if (this.IsDisposed) return;
+            pnlBottomBar.BackColor = ZeroTheme.Colors.Surface;
+            pnlBottomBar.Invalidate();
+            pageGeneral.BackColor = ZeroTheme.Colors.Surface;
+            pageAdvanced.BackColor = ZeroTheme.Colors.Surface;
+            pageSecurity.BackColor = ZeroTheme.Colors.Surface;
+            pnlBadge.BackColor = ZeroTheme.IsDark ? Color.FromArgb(30, 38, 54) : Color.FromArgb(242, 246, 255);
+            pnlEst.BackColor = ZeroTheme.Colors.Surface;
+            pnlSecInfo.BackColor = ZeroTheme.Colors.Surface;
         }
 
         private void ApplyLocalization()
         {
             this.Text = LocalizationService.Get("Dialog_AddArchive_Title");
-            if (cardSource != null)
-            {
-                cardSource.Title = LocalizationService.Get("Studio_Card1_Title");
-                cardSource.Subtitle = LocalizationService.Get("Studio_Card1_Sub");
-            }
-            if (btnBrowseFolder != null) btnBrowseFolder.Text = LocalizationService.Get("Studio_BtnBrowseFolder");
-            if (btnBrowseFile != null) btnBrowseFile.Text = LocalizationService.Get("Studio_BtnBrowseFile");
-            if (btnBrowseDest != null) btnBrowseDest.Text = LocalizationService.Get("Studio_BtnBrowseDest");
+            if (pageGeneral != null) pageGeneral.Title = LocalizationService.Get("Tab_General", "Chung (General)");
+            if (pageAdvanced != null) pageAdvanced.Title = LocalizationService.Get("Tab_Advanced", "Nâng cao (Advanced)");
+            if (pageSecurity != null) pageSecurity.Title = LocalizationService.Get("Tab_Security", "Bảo mật (Security)");
 
-            if (cardEngine != null)
-            {
-                cardEngine.Title = LocalizationService.Get("Studio_Card2_Title");
-                cardEngine.Subtitle = LocalizationService.Get("Studio_Card2_Sub");
-            }
-            if (cardSecurity != null)
-            {
-                cardSecurity.Title = LocalizationService.Get("Studio_Card3_Title");
-                cardSecurity.Subtitle = LocalizationService.Get("Studio_Card3_Sub");
-            }
-            if (cardAction != null)
-            {
-                cardAction.Title = LocalizationService.Get("Studio_Card4_Title");
-                cardAction.Subtitle = LocalizationService.Get("Studio_Card4_Sub");
-            }
+            if (lblSrc != null) lblSrc.Text = LocalizationService.Get("Studio_LblSource", "Tập tin hoặc thư mục nguồn:");
+            if (btnBrowseFolder != null) btnBrowseFolder.Text = LocalizationService.Get("Studio_BtnBrowseFolder", "Thư mục...");
+            if (btnBrowseFile != null) btnBrowseFile.Text = LocalizationService.Get("Studio_BtnBrowseFile", "Tập tin...");
+            if (lblDst != null) lblDst.Text = LocalizationService.Get("Studio_LblDestSave", "Tên tập tin đích (.zz, .zip, .exe):");
+            if (btnBrowseDest != null) btnBrowseDest.Text = LocalizationService.Get("Studio_BtnBrowseDest", "Duyệt...");
+
+            if (lblMethod != null) lblMethod.Text = LocalizationService.Get("Studio_LblMethod", "Thuật toán chính:");
+            if (lblProfile != null) lblProfile.Text = LocalizationService.Get("Studio_LblProfile", "Mức độ nén:");
+            if (lblSplit != null) lblSplit.Text = LocalizationService.Get("Studio_LblSplit", "Chia nhỏ khối lượng:");
+
+            if (lblPass != null) lblPass.Text = LocalizationService.Get("Studio_LblPassword", "Mật khẩu bảo vệ kho lưu trữ (tùy chọn):");
+
             if (btnStart != null) btnStart.Text = LocalizationService.Get("Studio_BtnCompress");
             if (btnEstimate != null) btnEstimate.Text = LocalizationService.Get("Studio_BtnEstimate");
+            if (btnCancel != null) btnCancel.Text = LocalizationService.Get("Btn_Cancel");
         }
 
         private void BrowseSourceFolder()
@@ -590,8 +602,9 @@ namespace ZeroZip.Main.Dialogs
             }
 
             btnEstimate.Enabled = false;
+            btnEstimateTab.Enabled = false;
             string src = txtSource.Text;
-            lblStatus.Text = "Đang lấy mẫu và phân tích dữ liệu...";
+            lblEstInfo.Text = "Đang lấy mẫu và phân tích tỉ lệ nén dự kiến...";
 
             try
             {
@@ -602,21 +615,24 @@ namespace ZeroZip.Main.Dialogs
                 var est = estTask.Result;
                 var cls = classifyTask.Result;
 
-                lblStatus.Text = $"[{cls.DetectedType}] -> {cls.RecommendedMethod} | {est.Summary()}";
+                lblEstInfo.Text = $"✅ [{cls.DetectedType}] -> Khuyến nghị: {cls.RecommendedMethod}\n{est.Summary()}";
+                lblEstInfo.ForeColor = ZeroTheme.Colors.Primary;
                 ShowToast($"Nhận diện: {cls.DetectedType} -> Khuyến nghị: {cls.RecommendedMethod}\n{est.Summary()}", "Nhận diện & Ước tính", ToastType.Info);
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "Lỗi phân tích: " + ex.Message;
+                lblEstInfo.Text = "Lỗi phân tích: " + ex.Message;
+                lblEstInfo.ForeColor = ZeroTheme.Colors.Danger;
                 ShowToast(ex.Message, "Lỗi phân tích", ToastType.Error);
             }
             finally
             {
                 btnEstimate.Enabled = true;
+                btnEstimateTab.Enabled = true;
             }
         }
 
-        private async void BtnStart_Click(object? sender, EventArgs e)
+        private void BtnStart_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtSource.Text) || string.IsNullOrWhiteSpace(txtDest.Text))
             {
@@ -624,14 +640,15 @@ namespace ZeroZip.Main.Dialogs
                 return;
             }
 
-            btnStart.Enabled = false;
-            btnEstimate.Enabled = false;
-            btnCancel.Text = "Dừng Lại";
-            _cts = new CancellationTokenSource();
-            progressBar.IsIndeterminate = true;
+            if (!Directory.Exists(txtSource.Text) && !File.Exists(txtSource.Text))
+            {
+                ShowToast("Tệp hoặc thư mục nguồn không tồn tại.", "Nguồn không hợp lệ", ToastType.Error);
+                return;
+            }
 
             string source = txtSource.Text;
             string dest = txtDest.Text;
+
             long splitSize = 0;
             if (cmbSplit.SelectedIndex == 1) splitSize = 2L * 1024 * 1024 * 1024;
             if (cmbSplit.SelectedIndex == 2) splitSize = 4L * 1024 * 1024 * 1024;
@@ -643,124 +660,66 @@ namespace ZeroZip.Main.Dialogs
             bool longMode = chkLong.Checked;
 
             bool isAuto = cmbMethod.SelectedIndex == 0;
-            DataClassificationResult? classified = null;
+            CompressionOptions options;
             if (isAuto)
             {
-                classified = DataClassifier.ClassifyPath(source);
-                lblStatus.Text = $"Tự động nhận diện: [{classified.DetectedType}] -> Áp dụng {classified.RecommendedMethod}. Đang nén...";
+                var classified = DataClassifier.ClassifyPath(source);
+                options = classified.CreateOptions(profile);
             }
             else
             {
-                var method = SelectedMethod();
-                lblStatus.Text = $"Đang nén [{method} / {profile}{(usePrecomp ? " / precomp" : "")}]. Vui lòng đợi...";
+                options = CompressionOptions.FromProfile(profile, SelectedMethod());
             }
 
-            var progress = new Progress<long>(done =>
+            options.Password = password;
+            options.UsePrecomp = usePrecomp;
+            options.Workers = Environment.ProcessorCount;
+            if (longMode)
             {
-                lblStatus.Text = $"Đang nén... đã xử lý {FormatSize(done)}";
-            });
+                options.LongDistanceMatching = true;
+                if (options.WindowLog < CompressionOptions.MaxLongWindowLog)
+                    options.WindowLog = CompressionOptions.MaxLongWindowLog;
+            }
+
+            // Hide configuration dialog and delegate execution to modern OperationProgressDialog
+            this.Hide();
 
             try
             {
-                CompressionOptions options;
-                if (classified != null)
+                using var progressDialog = new OperationProgressDialog(
+                    OperationType.Compress,
+                    source,
+                    dest,
+                    options,
+                    password,
+                    totalExpectedBytes: 0,
+                    splitSize: splitSize,
+                    wrapZip: wrapZip);
+
+                var dialogResult = progressDialog.ShowDialog(this.Owner ?? this);
+
+                if (dialogResult == DialogResult.OK && progressDialog.IsCompleted)
                 {
-                    options = classified.CreateOptions(profile);
+                    ResultArchivePath = dest;
+                    IsSuccess = true;
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
                 }
                 else
                 {
-                    options = CompressionOptions.FromProfile(profile, SelectedMethod());
-                }
-
-                options.Password = password;
-                options.UsePrecomp = usePrecomp;
-                options.Workers = Environment.ProcessorCount;
-                if (longMode)
-                {
-                    options.LongDistanceMatching = true;
-                    if (options.WindowLog < CompressionOptions.MaxLongWindowLog)
-                        options.WindowLog = CompressionOptions.MaxLongWindowLog;
-                }
-
-                var token = _cts.Token;
-                PackResult result;
-                if (dest.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                {
-                    await Task.Run(() => StandardZip.CompressToZip(source, dest, progress), token);
-                    long origSize = File.Exists(source) ? new FileInfo(source).Length : 0;
-                    if (Directory.Exists(source))
+                    // User cancelled or operation failed: re-display configuration dialog
+                    this.Show();
+                    if (progressDialog.FailureError != null)
                     {
-                        foreach (var f in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-                        {
-                            try { origSize += new FileInfo(f).Length; } catch { }
-                        }
+                        ShowToast("Thao tác nén bị gián đoạn.", "Chưa hoàn tất", ToastType.Warning);
                     }
-                    long compSize = File.Exists(dest) ? new FileInfo(dest).Length : 0;
-                    result = new PackResult
-                    {
-                        OriginalSize = origSize,
-                        CompressedSize = compSize,
-                        Method = CompressionMethod.Store,
-                    };
                 }
-                else
-                {
-                    bool isSfx = dest.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
-                    result = await Task.Run(() =>
-                        _sfxService.BuildPackage(source, dest, splitSize, options, isSfx, progress, token), token);
-                }
-
-                string extra = "";
-                if (wrapZip)
-                {
-                    lblStatus.Text = "Đang bọc ZIP để gửi...";
-                    string zip = await Task.Run(() => _sfxService.WrapForTransport(dest));
-                    extra = $"\nĐã bọc ZIP: {Path.GetFileName(zip)}";
-                }
-
-                lblStatus.Text = $"Hoàn tất! {FormatSize(result.OriginalSize)} -> {FormatSize(result.CompressedSize)} ({result.Ratio:P1})";
-                progressBar.IsIndeterminate = false;
-                progressBar.Value = 100;
-
-                ResultArchivePath = dest;
-                IsSuccess = true;
-
-                ShowToast(
-                    $"Nén thành công! {FormatSize(result.OriginalSize)} -> {FormatSize(result.CompressedSize)} ({result.Ratio:P1})",
-                    "Hoàn tất Siêu Nén",
-                    ToastType.Success);
-
-                await Task.Delay(400);
-                this.DialogResult = DialogResult.OK;
-                this.Close();
-            }
-            catch (OperationCanceledException)
-            {
-                lblStatus.Text = "Đã hủy theo yêu cầu.";
-                try { if (File.Exists(dest)) File.Delete(dest); } catch { }
-                ShowToast("Tiến trình đã được hủy.", "Đã hủy", ToastType.Warning);
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "Lỗi: " + ex.Message;
-                ShowToast(ex.Message, "Lỗi nén dữ liệu", ToastType.Error);
+                this.Show();
+                ShowToast("Lỗi khởi tạo nén: " + ex.Message, "Lỗi", ToastType.Error);
             }
-            finally
-            {
-                btnStart.Enabled = true;
-                btnEstimate.Enabled = true;
-                btnCancel.Text = "Đóng";
-            }
-        }
-
-        private static string FormatSize(long bytes)
-        {
-            if (bytes < 0) return "?";
-            string[] units = { "B", "KB", "MB", "GB", "TB" };
-            double size = bytes;
-            int unit = 0;
-            while (size >= 1024 && unit < units.Length - 1) { size /= 1024; unit++; }
-            return $"{size:0.##} {units[unit]}";
         }
     }
 }

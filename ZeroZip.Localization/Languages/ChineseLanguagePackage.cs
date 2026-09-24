@@ -67,10 +67,15 @@ public sealed class ChineseLanguagePackage : BaseLanguagePackage
         ["Btn_Info"] = "ℹ️ 信息",
         ["Btn_Theme_Light"] = "☀️ 浅色",
         ["Btn_Theme_Dark"] = "🌙 深色",
+        ["Btn_Cancel"] = "取消",
+        ["Btn_Close"] = "关闭",
 
         // Tabs
         ["Tab_Explorer"] = "📁 归档管理器",
         ["Tab_Studio"] = "⚡ 压缩工坊",
+        ["Tab_General"] = "常规 (General)",
+        ["Tab_Advanced"] = "高级 (Advanced)",
+        ["Tab_Security"] = "安全 (Security)",
 
         // Path & Navigation Bar
         ["Path_Up"] = "⬆️ 向上",
@@ -98,6 +103,8 @@ public sealed class ChineseLanguagePackage : BaseLanguagePackage
         ["Status_ItemsSummary"] = "{0} 个文件，{1} 个文件夹 | 当前位置: {2}",
         ["Status_ZeroSelected"] = "已选 0 项",
         ["Status_SelectedItems"] = "已选 {0} 项 ({1})",
+        ["Empty_Title"] = "尚未打开任何压缩包",
+        ["Empty_Desc"] = "将压缩包（.zz, .zip, .rar, .7z）或文件夹拖放至此进行浏览或压缩。\n或者选择下方的快捷操作：",
 
         // Dialogs & Messages
         ["Dialog_AddArchive_Title"] = "添加到压缩文件 (ZeroZip)",

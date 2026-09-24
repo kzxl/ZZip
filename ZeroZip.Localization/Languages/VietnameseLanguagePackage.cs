@@ -71,10 +71,15 @@ public sealed class VietnameseLanguagePackage : BaseLanguagePackage
         ["Btn_Lang_Toggle"] = "🌐 EN",
         ["Btn_Theme_Light"] = "☀️ Sáng",
         ["Btn_Theme_Dark"] = "🌙 Tối",
+        ["Btn_Cancel"] = "Hủy bỏ",
+        ["Btn_Close"] = "Đóng",
 
         // Tabs
         ["Tab_Explorer"] = "📁 Trình Duyệt Gói Nén (Explorer)",
         ["Tab_Studio"] = "⚡ Siêu Nén & Đóng Gói (Studio)",
+        ["Tab_General"] = "Chung (General)",
+        ["Tab_Advanced"] = "Nâng cao (Advanced)",
+        ["Tab_Security"] = "Bảo mật (Security)",
 
         // Path & Navigation Bar
         ["Path_Up"] = "⬆️ Lên",
@@ -102,6 +107,8 @@ public sealed class VietnameseLanguagePackage : BaseLanguagePackage
         ["Status_ItemsSummary"] = "{0} tệp, {1} thư mục | Thư mục hiện tại: {2}",
         ["Status_ZeroSelected"] = "0 mục được chọn",
         ["Status_SelectedItems"] = "Đã chọn {0} mục ({1})",
+        ["Empty_Title"] = "Chưa có kho lưu trữ nào được mở",
+        ["Empty_Desc"] = "Kéo thả tập tin nén (.zz, .zip, .rar, .7z) vào đây để duyệt hoặc thư mục để nén.\nHoặc sử dụng các tùy chọn thao tác nhanh bên dưới:",
 
         // Studio Tab & Dialogs
         ["Studio_SourceTitle"] = "1. Nguồn Dữ Liệu Cần Nén",
