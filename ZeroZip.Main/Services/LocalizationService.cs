@@ -16,9 +16,17 @@ namespace ZeroZip.Main.Services
     /// </summary>
     public static class LocalizationService
     {
+        private const string SettingsKey = @"Software\ZeroUniverse\ZeroZip";
+
         static LocalizationService()
         {
             LocalizationManager.Instance.LanguageChanged += _ => LanguageChanged?.Invoke();
+
+            string saved = LoadSavedLanguage();
+            if (!string.IsNullOrEmpty(saved))
+            {
+                LocalizationManager.Instance.SetLanguage(saved);
+            }
         }
 
         public static event Action? LanguageChanged;
@@ -33,12 +41,38 @@ namespace ZeroZip.Main.Services
         public static void SetLanguage(AppLanguage language)
         {
             string code = language == AppLanguage.English ? "en" : "vi";
-            LocalizationManager.Instance.SetLanguage(code);
+            SetLanguage(code);
         }
 
         public static void SetLanguage(string languageCode)
         {
-            LocalizationManager.Instance.SetLanguage(languageCode);
+            if (LocalizationManager.Instance.SetLanguage(languageCode))
+            {
+                SaveLanguage(languageCode);
+            }
+        }
+
+        private static string LoadSavedLanguage()
+        {
+            try
+            {
+                using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(SettingsKey);
+                return k?.GetValue("Language") as string ?? "vi";
+            }
+            catch
+            {
+                return "vi";
+            }
+        }
+
+        private static void SaveLanguage(string code)
+        {
+            try
+            {
+                using var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(SettingsKey);
+                k?.SetValue("Language", code);
+            }
+            catch { }
         }
 
         public static void ToggleLanguage()

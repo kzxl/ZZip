@@ -150,6 +150,25 @@ public sealed class EnglishLanguagePackage : BaseLanguagePackage
         ["Studio_Card4_Title"] = "4. Execution and Progress",
         ["Studio_Card4_Sub"] = "Launch ultra-compression or estimate storage savings",
         ["Studio_BtnEstimate"] = "📊 Estimate Ratio",
-        ["Studio_BtnCompress"] = "⚡ Start Compression"
+        ["Studio_BtnCompress"] = "⚡ Start Compression",
+
+        // Shell Context Menu
+        ["Shell_OpenArchive"] = "Open archive",
+        ["Shell_ExtractFiles"] = "Extract files...",
+        ["Shell_ExtractHere"] = "Extract Here",
+        ["Shell_ExtractToFolder"] = "Extract to folder...",
+        ["Shell_TestArchive"] = "Test archive",
+        ["Shell_AddToArchive"] = "Add to archive...",
+        ["Shell_CompressZz"] = "Fast compress to .zz",
+        ["Shell_CompressZip"] = "Fast compress to .zip",
+        ["Shell_CompressSplit2G"] = "Compress & split 2GB (.001, .002)...",
+        ["Shell_CrcSha"] = "Checksum & compression ratio (CRC SHA)...",
+        ["Shell_CompressDirZz"] = "Fast compress folder to .zz",
+        ["Shell_CompressDirZip"] = "Fast compress folder to .zip",
+        ["Shell_CompressDirSplit2G"] = "Compress folder & split 2GB...",
+        ["Shell_CompressCurrentFolderZz"] = "Compress current folder to .zz...",
+        ["Shell_CompressCurrentFolderZip"] = "Compress current folder to .zip...",
+        ["Shell_OpenStudioCurrent"] = "Open ZeroZip Studio here...",
+        ["Shell_ZeroZipArchiveDesc"] = "ZeroZip Sovereign Archive (.zz)"
     };
 }

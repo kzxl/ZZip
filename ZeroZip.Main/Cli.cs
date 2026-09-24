@@ -35,7 +35,7 @@ internal static class Cli
                 "l" or "list" or "-l" => RunList(args),
                 "t" or "test" or "-t" => RunTest(args),
                 "e" or "estimate" or "--estimate" => RunEstimate(args),
-                "register-context-menu" or "--register" or "register-shell" or "--register-shell" => RunRegisterContextMenu(),
+                "register-context-menu" or "--register" or "register-shell" or "--register-shell" => RunRegisterContextMenu(args),
                 "unregister-context-menu" or "--unregister" or "unregister-shell" or "--unregister-shell" => RunUnregisterContextMenu(),
                 "h" or "help" or "-h" or "--help" or "/?" => PrintHelp(),
                 _ => Fail($"Lệnh không hợp lệ: {verb}"),
@@ -493,12 +493,23 @@ Tham số:
         return $"{size:0.##} {units[unit]}";
     }
 
-    private static int RunRegisterContextMenu()
+    private static int RunRegisterContextMenu(string[]? args = null)
     {
-        Console.WriteLine("Đang đăng ký ZeroZip vào Windows Explorer context menu...");
+        if (args != null)
+        {
+            for (int i = 1; i < args.Length; i++)
+            {
+                if ((args[i].Equals("--lang", StringComparison.OrdinalIgnoreCase) || args[i].Equals("-l", StringComparison.OrdinalIgnoreCase)) && i + 1 < args.Length)
+                {
+                    LocalizationService.SetLanguage(args[i + 1]);
+                }
+            }
+        }
+
+        Console.WriteLine($"Đang đăng ký ZeroZip vào Windows Explorer context menu (Ngôn ngữ: {LocalizationService.CurrentLanguageCode})...");
         if (ShellContextMenuService.Register())
         {
-            Console.WriteLine("Thành công: Đã thêm các mục ZeroZip vào menu chuột phải (File, Thư mục, và .ztar).");
+            Console.WriteLine("Thành công: Đã thêm các mục ZeroZip vào menu chuột phải theo ngôn ngữ hiện hành.");
             return 0;
         }
         return Fail("Không thể ghi vào Registry người dùng.");

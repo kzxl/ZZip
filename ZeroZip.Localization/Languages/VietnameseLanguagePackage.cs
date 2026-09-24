@@ -150,6 +150,25 @@ public sealed class VietnameseLanguagePackage : BaseLanguagePackage
         ["Studio_Card4_Title"] = "4. Thực Thi và Giám Sát Tiến Trình",
         ["Studio_Card4_Sub"] = "Khởi chạy thuật toán siêu nén hoặc kiểm tra trước tỉ lệ tiết kiệm",
         ["Studio_BtnEstimate"] = "📊 Ước Tính Tỉ Lệ",
-        ["Studio_BtnCompress"] = "⚡ Bắt Đầu Nén"
+        ["Studio_BtnCompress"] = "⚡ Bắt Đầu Nén",
+
+        // Shell Context Menu
+        ["Shell_OpenArchive"] = "Mở tập tin nén",
+        ["Shell_ExtractFiles"] = "Giải nén tập tin...",
+        ["Shell_ExtractHere"] = "Giải nén tại đây",
+        ["Shell_ExtractToFolder"] = "Giải nén vào thư mục riêng...",
+        ["Shell_TestArchive"] = "Kiểm tra tập tin nén",
+        ["Shell_AddToArchive"] = "Thêm vào tập tin nén...",
+        ["Shell_CompressZz"] = "Nén nhanh sang .zz",
+        ["Shell_CompressZip"] = "Nén nhanh sang .zip",
+        ["Shell_CompressSplit2G"] = "Nén & chia nhỏ 2GB (.001, .002)...",
+        ["Shell_CrcSha"] = "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...",
+        ["Shell_CompressDirZz"] = "Nén nhanh thư mục sang .zz",
+        ["Shell_CompressDirZip"] = "Nén nhanh thư mục sang .zip",
+        ["Shell_CompressDirSplit2G"] = "Nén thư mục chia nhỏ 2GB...",
+        ["Shell_CompressCurrentFolderZz"] = "Nén thư mục hiện tại sang .zz...",
+        ["Shell_CompressCurrentFolderZip"] = "Nén thư mục hiện tại sang .zip...",
+        ["Shell_OpenStudioCurrent"] = "Mở ZeroZip Studio tại đây...",
+        ["Shell_ZeroZipArchiveDesc"] = "ZeroZip Sovereign Archive (.zz)"
     };
 }

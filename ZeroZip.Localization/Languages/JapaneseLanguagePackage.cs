@@ -112,6 +112,25 @@ public sealed class JapaneseLanguagePackage : BaseLanguagePackage
         ["Studio_Card4_Title"] = "4. 実行と進捗状況",
         ["Studio_Card4_Sub"] = "超高速圧縮を開始または圧縮率を試算します",
         ["Studio_BtnEstimate"] = "📊 圧縮率を試算",
-        ["Studio_BtnCompress"] = "⚡ 圧縮を開始"
+        ["Studio_BtnCompress"] = "⚡ 圧縮を開始",
+
+        // Shell Context Menu
+        ["Shell_OpenArchive"] = "アーカイブを開く",
+        ["Shell_ExtractFiles"] = "ファイルを展開...",
+        ["Shell_ExtractHere"] = "ここに展開",
+        ["Shell_ExtractToFolder"] = "フォルダーに展開...",
+        ["Shell_TestArchive"] = "アーカイブのテスト",
+        ["Shell_AddToArchive"] = "アーカイブに追加...",
+        ["Shell_CompressZz"] = ".zz に高速圧縮",
+        ["Shell_CompressZip"] = ".zip に高速圧縮",
+        ["Shell_CompressSplit2G"] = "圧縮して2GBに分割 (.001, .002)...",
+        ["Shell_CrcSha"] = "チェックサムと圧縮率の確認 (CRC SHA)...",
+        ["Shell_CompressDirZz"] = "フォルダーを .zz に高速圧縮",
+        ["Shell_CompressDirZip"] = "フォルダーを .zip に高速圧縮",
+        ["Shell_CompressDirSplit2G"] = "フォルダーを圧縮して2GBに分割...",
+        ["Shell_CompressCurrentFolderZz"] = "現在のフォルダーを .zz に圧縮...",
+        ["Shell_CompressCurrentFolderZip"] = "現在のフォルダーを .zip に圧縮...",
+        ["Shell_OpenStudioCurrent"] = "ここで ZeroZip Studio を開く...",
+        ["Shell_ZeroZipArchiveDesc"] = "ZeroZip アーカイブ (.zz)"
     };
 }

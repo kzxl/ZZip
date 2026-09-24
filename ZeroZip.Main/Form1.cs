@@ -808,6 +808,12 @@ namespace ZeroZip.Main
             {
                 RefreshFileListView();
             }
+
+            // Synchronize Windows Explorer Shell Context Menu strings if registered
+            if (ShellContextMenuService.IsRegistered())
+            {
+                ShellContextMenuService.Register();
+            }
         }
 
         private async void LvArchiveFiles_DoubleClick(object? sender, EventArgs e)

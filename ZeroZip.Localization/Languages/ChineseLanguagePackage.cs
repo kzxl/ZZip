@@ -112,6 +112,25 @@ public sealed class ChineseLanguagePackage : BaseLanguagePackage
         ["Studio_Card4_Title"] = "4. 执行与进度监控",
         ["Studio_Card4_Sub"] = "启动极限压缩或预先估算压缩收益",
         ["Studio_BtnEstimate"] = "📊 评估压缩比",
-        ["Studio_BtnCompress"] = "⚡ 开始压缩"
+        ["Studio_BtnCompress"] = "⚡ 开始压缩",
+
+        // Shell Context Menu
+        ["Shell_OpenArchive"] = "打开压缩文件",
+        ["Shell_ExtractFiles"] = "解压文件...",
+        ["Shell_ExtractHere"] = "解压到当前文件夹",
+        ["Shell_ExtractToFolder"] = "解压到单独文件夹...",
+        ["Shell_TestArchive"] = "测试压缩文件",
+        ["Shell_AddToArchive"] = "添加到压缩文件...",
+        ["Shell_CompressZz"] = "快速压缩为 .zz",
+        ["Shell_CompressZip"] = "快速压缩为 .zip",
+        ["Shell_CompressSplit2G"] = "压缩并分卷为 2GB (.001, .002)...",
+        ["Shell_CrcSha"] = "校验和与压缩率检查 (CRC SHA)...",
+        ["Shell_CompressDirZz"] = "将文件夹快速压缩为 .zz",
+        ["Shell_CompressDirZip"] = "将文件夹快速压缩为 .zip",
+        ["Shell_CompressDirSplit2G"] = "将文件夹压缩并分卷 2GB...",
+        ["Shell_CompressCurrentFolderZz"] = "将当前文件夹压缩为 .zz...",
+        ["Shell_CompressCurrentFolderZip"] = "将当前文件夹压缩为 .zip...",
+        ["Shell_OpenStudioCurrent"] = "在此处打开 ZeroZip Studio...",
+        ["Shell_ZeroZipArchiveDesc"] = "ZeroZip 归档文件 (.zz)"
     };
 }
