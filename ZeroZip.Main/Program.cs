@@ -127,11 +127,11 @@ static class Program
             return dialog.IsCompleted ? 0 : 1;
         }
 
-        // 4. GUI Studio Mode
+        // 4. GUI Add to Archive Dialog Mode (WinRAR / 7-Zip context menu "Add to archive...")
         if (first.Equals("--studio", StringComparison.OrdinalIgnoreCase) && args.Length >= 2)
         {
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1(initialSourcePath: args[1], openStudio: true));
+            Application.Run(new Dialogs.AddArchiveDialog(args[1]));
             return 0;
         }
 
@@ -148,7 +148,7 @@ static class Program
             }
             else
             {
-                Application.Run(new Form1(initialSourcePath: first, openStudio: true));
+                Application.Run(new Dialogs.AddArchiveDialog(first));
             }
             return 0;
         }

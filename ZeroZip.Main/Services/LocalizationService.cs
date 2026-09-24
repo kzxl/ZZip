@@ -435,6 +435,11 @@ namespace ZeroZip.Main.Services
             },
 
             // Dialogs & Messages
+            ["Dialog_AddArchive_Title"] = new()
+            {
+                [AppLanguage.Vietnamese] = "Thêm vào tập tin nén (ZeroZip)",
+                [AppLanguage.English] = "Add to Archive (ZeroZip)"
+            },
             ["Msg_SelectSourceFirst"] = new()
             {
                 [AppLanguage.Vietnamese] = "Vui lòng chọn tệp hoặc thư mục nguồn hợp lệ trước khi bắt đầu.",
@@ -492,10 +497,20 @@ namespace ZeroZip.Main.Services
                 [AppLanguage.Vietnamese] = "📁 Mở thư mục này",
                 [AppLanguage.English] = "📁 Open Folder"
             },
+            ["Studio_LblSource"] = new()
+            {
+                [AppLanguage.Vietnamese] = "Tập tin hoặc thư mục nguồn:",
+                [AppLanguage.English] = "Source file or folder:"
+            },
+            ["Studio_LblDestSave"] = new()
+            {
+                [AppLanguage.Vietnamese] = "Tập tin nén đích (.zz, .zip, .exe):",
+                [AppLanguage.English] = "Destination archive (.zz, .zip, .exe):"
+            },
             ["Studio_Card1_Title"] = new()
             {
-                [AppLanguage.Vietnamese] = "1. Nguồn Dữ Liệu & Tệp Đích",
-                [AppLanguage.English] = "1. Source Data & Destination"
+                [AppLanguage.Vietnamese] = "1. Nguồn Dữ Liệu và Tệp Đích",
+                [AppLanguage.English] = "1. Source Data and Destination"
             },
             ["Studio_Card1_Sub"] = new()
             {
@@ -504,18 +519,18 @@ namespace ZeroZip.Main.Services
             },
             ["Studio_Card2_Title"] = new()
             {
-                [AppLanguage.Vietnamese] = "2. Thuật Toán & Động Cơ Nén (ZeroUniverse)",
-                [AppLanguage.English] = "2. Compression Algorithm & Engine (ZeroUniverse)"
+                [AppLanguage.Vietnamese] = "2. Thuật Toán và Động Cơ Nén (ZeroUniverse)",
+                [AppLanguage.English] = "2. Compression Algorithm and Engine (ZeroUniverse)"
             },
             ["Studio_Card2_Sub"] = new()
             {
-                [AppLanguage.Vietnamese] = "Tự động nhận diện cấu trúc tệp (DataClassifier) & chọn thuật toán tối ưu",
-                [AppLanguage.English] = "Automatic pattern classification (DataClassifier) & optimal engine"
+                [AppLanguage.Vietnamese] = "Tự động nhận diện cấu trúc tệp (DataClassifier) và chọn thuật toán tối ưu",
+                [AppLanguage.English] = "Automatic pattern classification (DataClassifier) and optimal engine"
             },
             ["Studio_Card3_Title"] = new()
             {
-                [AppLanguage.Vietnamese] = "3. Bảo Mật & Mã Hóa Dữ Liệu",
-                [AppLanguage.English] = "3. Data Security & Encryption"
+                [AppLanguage.Vietnamese] = "3. Bảo Mật và Mã Hóa Dữ Liệu",
+                [AppLanguage.English] = "3. Data Security and Encryption"
             },
             ["Studio_Card3_Sub"] = new()
             {
@@ -524,8 +539,8 @@ namespace ZeroZip.Main.Services
             },
             ["Studio_Card4_Title"] = new()
             {
-                [AppLanguage.Vietnamese] = "4. Thực Thi & Giám Sát Tiến Trình",
-                [AppLanguage.English] = "4. Execution & Progress"
+                [AppLanguage.Vietnamese] = "4. Thực Thi và Giám Sát Tiến Trình",
+                [AppLanguage.English] = "4. Execution and Progress"
             },
             ["Studio_Card4_Sub"] = new()
             {
