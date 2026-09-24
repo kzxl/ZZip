@@ -28,6 +28,14 @@ namespace ZeroZip.Main.Services
         private const string SystemFileAssocKeyZz = @"Software\Classes\SystemFileAssociations\.zz\shell";
         private const string SystemFileAssocKeyZtar = @"Software\Classes\SystemFileAssociations\.ztar\shell";
 
+        public static readonly string[] ArchiveExtensions =
+        {
+            ".zz", ".ztar", ".zip", ".7z", ".rar", ".tar",
+            ".gz", ".tgz", ".bz2", ".tbz2", ".xz", ".txz",
+            ".iso", ".cab", ".zst", ".lz4", ".lzma", ".wim",
+            ".001"
+        };
+
         public static bool IsRegistered()
         {
             try
@@ -103,17 +111,20 @@ namespace ZeroZip.Main.Services
 
                 const string menuTitle = "ZeroZip";
 
-                // --- 1. Cascading Menu for Files (*\shell\ZeroZip) ---
+                // --- 1. Cascading Menu for Generic Files (*\shell\ZeroZip) ---
+                // Shows ONLY compression options for normal/uncompressed files.
+                // SeparatorBefore & SeparatorAfter isolate ZeroZip into its own dedicated context menu cluster.
                 using (var root = Registry.CurrentUser.CreateSubKey(FileShellKey))
                 {
-                    // CRITICAL: Do NOT set default value ("") on cascading parent key!
                     root.DeleteValue("", throwOnMissingValue: false);
                     root.SetValue("MUIVerb", menuTitle);
                     root.SetValue("Icon", $"\"{exe}\",0");
                     root.SetValue("SubCommands", "");
+                    root.SetValue("SeparatorBefore", "");
+                    root.SetValue("SeparatorAfter", "");
 
                     using var shell = root.CreateSubKey("shell");
-                    PopulateFileSubCommands(shell, exe);
+                    PopulateGenericCompressionSubCommands(shell, exe);
                 }
 
                 // --- 2. Cascading Menu for Folders (Directory\shell\ZeroZip) ---
@@ -123,6 +134,8 @@ namespace ZeroZip.Main.Services
                     dirRoot.SetValue("MUIVerb", menuTitle);
                     dirRoot.SetValue("Icon", $"\"{exe}\",0");
                     dirRoot.SetValue("SubCommands", "");
+                    dirRoot.SetValue("SeparatorBefore", "");
+                    dirRoot.SetValue("SeparatorAfter", "");
 
                     using var shell = dirRoot.CreateSubKey("shell");
                     PopulateDirectorySubCommands(shell, exe);
@@ -135,12 +148,14 @@ namespace ZeroZip.Main.Services
                     bgRoot.SetValue("MUIVerb", menuTitle);
                     bgRoot.SetValue("Icon", $"\"{exe}\",0");
                     bgRoot.SetValue("SubCommands", "");
+                    bgRoot.SetValue("SeparatorBefore", "");
+                    bgRoot.SetValue("SeparatorAfter", "");
 
                     using var shell = bgRoot.CreateSubKey("shell");
                     PopulateBackgroundSubCommands(shell, exe);
                 }
 
-                // --- 4. File Association for .zz and .ztar (ZeroZip.Archive) ---
+                // --- 4. File Associations for Native Archives (.zz and .ztar) ---
                 using (var extKey = Registry.CurrentUser.CreateSubKey(ExtensionKeyZz))
                 {
                     extKey.SetValue("", "ZeroZip.Archive");
@@ -158,18 +173,63 @@ namespace ZeroZip.Main.Services
                         dIcon.SetValue("", $"\"{exe}\",0");
                     }
 
-                    using var shell = archKey.CreateSubKey("shell");
-                    PopulateArchiveShellVerbs(shell, exe);
+                    // Default double-click verb: Open with ZeroZip Explorer (WinRAR/7-Zip style)
+                    using (var openKey = archKey.CreateSubKey(@"shell\open"))
+                    {
+                        string text = LocalizationService.Get("Shell_OpenArchive");
+                        openKey.SetValue("", text);
+                        openKey.SetValue("Icon", $"\"{exe}\",0");
+                        using var cmd = openKey.CreateSubKey("command");
+                        cmd.SetValue("", $"\"{exe}\" \"%1\"");
+                    }
+
+                    // Cascading ZeroZip cluster for ZeroZip.Archive ProgID
+                    using (var cascKey = archKey.CreateSubKey(@"shell\ZeroZip"))
+                    {
+                        cascKey.DeleteValue("", throwOnMissingValue: false);
+                        cascKey.SetValue("MUIVerb", menuTitle);
+                        cascKey.SetValue("Icon", $"\"{exe}\",0");
+                        cascKey.SetValue("SubCommands", "");
+                        cascKey.SetValue("SeparatorBefore", "");
+                        cascKey.SetValue("SeparatorAfter", "");
+
+                        using var shell = cascKey.CreateSubKey("shell");
+                        PopulateArchiveSubCommands(shell, exe);
+                    }
                 }
 
-                // SystemFileAssociations (Checked first by modern Windows Shell)
-                using (var sfaKeyZz = Registry.CurrentUser.CreateSubKey(SystemFileAssocKeyZz))
+                // --- 5. SystemFileAssociations for all archive extensions ---
+                // Windows Explorer queries SystemFileAssociations\<ext>\shell\ZeroZip when right-clicking archive files,
+                // overriding *\shell\ZeroZip and cleanly presenting extraction actions + compression actions.
+                foreach (var ext in ArchiveExtensions)
                 {
-                    PopulateArchiveShellVerbs(sfaKeyZz, exe);
+                    string sfaKeyPath = $@"Software\Classes\SystemFileAssociations\{ext}\shell\ZeroZip";
+                    using var sfaRoot = Registry.CurrentUser.CreateSubKey(sfaKeyPath);
+                    sfaRoot.DeleteValue("", throwOnMissingValue: false);
+                    sfaRoot.SetValue("MUIVerb", menuTitle);
+                    sfaRoot.SetValue("Icon", $"\"{exe}\",0");
+                    sfaRoot.SetValue("SubCommands", "");
+                    sfaRoot.SetValue("SeparatorBefore", "");
+                    sfaRoot.SetValue("SeparatorAfter", "");
+
+                    using var shell = sfaRoot.CreateSubKey("shell");
+                    PopulateArchiveSubCommands(shell, exe);
                 }
-                using (var sfaKeyZtar = Registry.CurrentUser.CreateSubKey(SystemFileAssocKeyZtar))
+
+                // Explicit double click handler for .zz and .ztar in SystemFileAssociations
+                using (var sfaOpenZz = Registry.CurrentUser.CreateSubKey(@"Software\Classes\SystemFileAssociations\.zz\shell\open"))
                 {
-                    PopulateArchiveShellVerbs(sfaKeyZtar, exe);
+                    sfaOpenZz.SetValue("", LocalizationService.Get("Shell_OpenArchive"));
+                    sfaOpenZz.SetValue("Icon", $"\"{exe}\",0");
+                    using var cmd = sfaOpenZz.CreateSubKey("command");
+                    cmd.SetValue("", $"\"{exe}\" \"%1\"");
+                }
+                using (var sfaOpenZtar = Registry.CurrentUser.CreateSubKey(@"Software\Classes\SystemFileAssociations\.ztar\shell\open"))
+                {
+                    sfaOpenZtar.SetValue("", LocalizationService.Get("Shell_OpenArchive"));
+                    sfaOpenZtar.SetValue("Icon", $"\"{exe}\",0");
+                    using var cmd = sfaOpenZtar.CreateSubKey("command");
+                    cmd.SetValue("", $"\"{exe}\" \"%1\"");
                 }
 
                 NotifyShell();
@@ -181,18 +241,76 @@ namespace ZeroZip.Main.Services
             }
         }
 
-        private const string ArchiveAppliesTo = "System.FileExtension:=.zz OR System.FileExtension:=.ztar OR System.FileExtension:=.zip OR System.FileExtension:=.7z OR System.FileExtension:=.rar OR System.FileExtension:=.tar OR System.FileExtension:=.gz OR System.FileExtension:=.bz2 OR System.FileExtension:=.xz";
-
-        private static void PopulateFileSubCommands(RegistryKey shell, string exe)
+        /// <summary>
+        /// Populates the cascading submenu for generic / non-archive files.
+        /// Contains only compression and checksum options.
+        /// </summary>
+        private static void PopulateGenericCompressionSubCommands(RegistryKey shell, string exe)
         {
-            // --- Extraction commands (scoped to archive extensions via AppliesTo) ---
+            using (var c1 = shell.CreateSubKey("01_AddToArchive"))
+            {
+                string text = LocalizationService.Get("Shell_AddToArchive");
+                c1.SetValue("", text);
+                c1.SetValue("MUIVerb", text);
+                c1.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c1.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
+            }
+
+            using (var c2 = shell.CreateSubKey("02_CompressZz"))
+            {
+                string text = LocalizationService.Get("Shell_CompressZz");
+                c2.SetValue("", text);
+                c2.SetValue("MUIVerb", text);
+                c2.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c2.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
+            }
+
+            using (var c3 = shell.CreateSubKey("03_CompressZip"))
+            {
+                string text = LocalizationService.Get("Shell_CompressZip");
+                c3.SetValue("", text);
+                c3.SetValue("MUIVerb", text);
+                c3.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c3.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --zip");
+            }
+
+            using (var c4 = shell.CreateSubKey("04_CompressSplit2G"))
+            {
+                string text = LocalizationService.Get("Shell_CompressSplit2G");
+                c4.SetValue("", text);
+                c4.SetValue("MUIVerb", text);
+                c4.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c4.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --split 2GB");
+            }
+
+            using (var c5 = shell.CreateSubKey("05_CrcSha"))
+            {
+                string text = LocalizationService.Get("Shell_CrcSha");
+                c5.SetValue("", text);
+                c5.SetValue("MUIVerb", text);
+                c5.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c5.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" e \"%1\"");
+            }
+        }
+
+        /// <summary>
+        /// Populates the cascading submenu for archive files (e.g. .zz, .ztar, .zip, .7z, .rar, etc.).
+        /// Contains extraction options first, followed by an internal divider, then compression options.
+        /// </summary>
+        private static void PopulateArchiveSubCommands(RegistryKey shell, string exe)
+        {
+            // --- Extraction commands ---
             using (var c1 = shell.CreateSubKey("01_ExtractFiles"))
             {
                 string text = LocalizationService.Get("Shell_ExtractFiles");
                 c1.SetValue("", text);
                 c1.SetValue("MUIVerb", text);
                 c1.SetValue("Icon", $"\"{exe}\",0");
-                c1.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c1.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --prompt");
             }
@@ -203,7 +321,6 @@ namespace ZeroZip.Main.Services
                 c2.SetValue("", text);
                 c2.SetValue("MUIVerb", text);
                 c2.SetValue("Icon", $"\"{exe}\",0");
-                c2.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c2.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --here");
             }
@@ -214,7 +331,6 @@ namespace ZeroZip.Main.Services
                 c3.SetValue("", text);
                 c3.SetValue("MUIVerb", text);
                 c3.SetValue("Icon", $"\"{exe}\",0");
-                c3.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c3.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --to-folder");
             }
@@ -225,18 +341,18 @@ namespace ZeroZip.Main.Services
                 c4.SetValue("", text);
                 c4.SetValue("MUIVerb", text);
                 c4.SetValue("Icon", $"\"{exe}\",0");
-                c4.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c4.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-test \"%1\"");
             }
 
-            // --- Compression commands (available for all files) ---
+            // --- Compression commands (with SeparatorBefore to separate extraction from compression) ---
             using (var c5 = shell.CreateSubKey("05_AddToArchive"))
             {
                 string text = LocalizationService.Get("Shell_AddToArchive");
                 c5.SetValue("", text);
                 c5.SetValue("MUIVerb", text);
                 c5.SetValue("Icon", $"\"{exe}\",0");
+                c5.SetValue("SeparatorBefore", "");
                 using var cmd = c5.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
             }
@@ -358,20 +474,6 @@ namespace ZeroZip.Main.Services
             }
         }
 
-        private static void PopulateArchiveShellVerbs(RegistryKey shell, string exe)
-        {
-            // Default verb: Open with ZeroZip Explorer (WinRAR style)
-            // Keeping ONLY 'open' at the root level so it doesn't clutter Explorer context menu.
-            using (var openKey = shell.CreateSubKey("open"))
-            {
-                string text = LocalizationService.Get("Shell_OpenArchive");
-                openKey.SetValue("", text);
-                openKey.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = openKey.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" \"%1\"");
-            }
-        }
-
         public static bool Unregister()
         {
             try
@@ -393,6 +495,15 @@ namespace ZeroZip.Main.Services
                 Registry.CurrentUser.DeleteSubKeyTree(ExtensionKeyZtar, throwOnMissingSubKey: false);
                 Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\SystemFileAssociations\.zz", throwOnMissingSubKey: false);
                 Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\SystemFileAssociations\.ztar", throwOnMissingSubKey: false);
+
+                foreach (var ext in ArchiveExtensions)
+                {
+                    try
+                    {
+                        Registry.CurrentUser.DeleteSubKeyTree($@"Software\Classes\SystemFileAssociations\{ext}\shell\ZeroZip", throwOnMissingSubKey: false);
+                    }
+                    catch { }
+                }
 
                 NotifyShell();
                 return true;
