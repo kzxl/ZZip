@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
@@ -57,7 +57,7 @@ namespace ZZip.Stub
 
             var lblTitle = new Label
             {
-                Text = "⚡ ZEROZIP EXTRACTOR",
+                Text = "⚡ ZZIP EXTRACTOR",
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 Location = new Point(14, 8),
                 AutoSize = true,

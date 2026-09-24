@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace ZZip.Localization.Languages;
 
@@ -24,7 +24,7 @@ public sealed class ChineseLanguagePackage : BaseLanguagePackage
     {
         // Window & Brand
         ["App_Title"] = "ZZip — 主权级超高压缩工坊与归档管理器",
-        ["Brand_Title"] = "⚡ ZEROZIP ARCHIVER",
+        ["Brand_Title"] = "⚡ ZZIP ARCHIVER",
         ["Brand_Subtitle"] = "高性能极速压缩工具 (Zstd/LZMA/Brotli) — ZeroUniverse",
 
         // Menu Bar - File

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace ZZip.Localization.Languages;
 
@@ -24,7 +24,7 @@ public sealed class JapaneseLanguagePackage : BaseLanguagePackage
     {
         // Window & Brand
         ["App_Title"] = "ZZip — 超高速圧縮スタジオ ＆ アーカイブエクスプローラー",
-        ["Brand_Title"] = "⚡ ZEROZIP ARCHIVER",
+        ["Brand_Title"] = "⚡ ZZIP ARCHIVER",
         ["Brand_Subtitle"] = "超高速圧縮ツール (Zstd/LZMA/Brotli) — ZeroUniverse",
 
         // Menu Bar - File

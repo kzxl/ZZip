@@ -1,11 +1,11 @@
-﻿{
+{
   "code": "fr",
   "displayName": "🇫🇷 Français",
   "nativeName": "Français",
   "cultureName": "fr-FR",
   "translations": {
     "App_Title": "ZZip — Studio d'Ultra-Compression & Explorateur d'Archives",
-    "Brand_Title": "⚡ ZEROZIP ARCHIVER",
+    "Brand_Title": "⚡ ZZIP ARCHIVER",
     "Brand_Subtitle": "Archivage Souverain Haute Performance (Zstd/LZMA/Brotli) — ZeroUniverse",
     "Menu_File": "Fichier",
     "Menu_OpenArchive": "Ouvrir l'archive... (Ctrl+O)",

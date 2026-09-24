@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace ZZip.Localization.Languages;
 
@@ -23,7 +23,7 @@ public sealed class EnglishLanguagePackage : BaseLanguagePackage
     {
         // Window & Brand
         ["App_Title"] = "ZZip — Sovereign Ultra-Compression Studio & Archive Explorer",
-        ["Brand_Title"] = "⚡ ZEROZIP ARCHIVER",
+        ["Brand_Title"] = "⚡ ZZIP ARCHIVER",
         ["Brand_Subtitle"] = "High-Performance Sovereign Archiver (Zstd/LZMA/Brotli) — ZeroUniverse",
 
         // Menu Bar - File
