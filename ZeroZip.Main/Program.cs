@@ -86,21 +86,46 @@ static class Program
             ApplicationConfiguration.Initialize();
             string source = args[1];
             bool toFolder = false;
+            bool extractHere = false;
+
             for (int i = 2; i < args.Length; i++)
             {
                 if (args[i].Equals("--to-folder", StringComparison.OrdinalIgnoreCase))
                     toFolder = true;
+                else if (args[i].Equals("--here", StringComparison.OrdinalIgnoreCase))
+                    extractHere = true;
             }
 
-            string? destDir = toFolder
-                ? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".", Path.GetFileNameWithoutExtension(source))
-                : null;
+            string? destDir = null;
+            if (toFolder)
+            {
+                destDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".", Path.GetFileNameWithoutExtension(source));
+            }
+            else if (extractHere)
+            {
+                destDir = Path.GetDirectoryName(Path.GetFullPath(source)) ?? ".";
+            }
+            else
+            {
+                using var fbd = new FolderBrowserDialog
+                {
+                    Description = "Chọn thư mục giải nén",
+                    UseDescriptionForTitle = true,
+                    SelectedPath = Path.GetDirectoryName(Path.GetFullPath(source)) ?? ""
+                };
+                if (fbd.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(fbd.SelectedPath))
+                {
+                    return 0; // User cancelled
+                }
+                destDir = fbd.SelectedPath;
+            }
 
             long totalBytes = 0;
             try
             {
                 var f = SfxComposer.ReadFooter(source);
                 if (f != null) totalBytes = f.OriginalSize;
+                else if (File.Exists(source)) totalBytes = new FileInfo(source).Length;
             }
             catch { }
 

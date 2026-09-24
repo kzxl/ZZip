@@ -246,6 +246,16 @@ namespace ZeroZip.Main.Services
                 string destDir = _destPath ?? Path.Combine(Path.GetDirectoryName(_sourcePath) ?? ".",
                     Path.GetFileNameWithoutExtension(_sourcePath) + "_Extracted");
 
+                if (_sourcePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    await Task.Run(() =>
+                    {
+                        Directory.CreateDirectory(destDir);
+                        System.IO.Compression.ZipFile.ExtractToDirectory(_sourcePath, destDir, overwriteFiles: true);
+                    }, _cts.Token);
+                    return;
+                }
+
                 await Task.Run(() =>
                 {
                     var footer = SfxComposer.ReadFooter(_sourcePath);

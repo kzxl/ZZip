@@ -35,8 +35,8 @@ internal static class Cli
                 "l" or "list" or "-l" => RunList(args),
                 "t" or "test" or "-t" => RunTest(args),
                 "e" or "estimate" or "--estimate" => RunEstimate(args),
-                "register-context-menu" or "--register" => RunRegisterContextMenu(),
-                "unregister-context-menu" or "--unregister" => RunUnregisterContextMenu(),
+                "register-context-menu" or "--register" or "register-shell" or "--register-shell" => RunRegisterContextMenu(),
+                "unregister-context-menu" or "--unregister" or "unregister-shell" or "--unregister-shell" => RunUnregisterContextMenu(),
                 "h" or "help" or "-h" or "--help" or "/?" => PrintHelp(),
                 _ => Fail($"Lệnh không hợp lệ: {verb}"),
             };

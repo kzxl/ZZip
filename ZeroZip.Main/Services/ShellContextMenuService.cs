@@ -181,59 +181,94 @@ namespace ZeroZip.Main.Services
             }
         }
 
+        private const string ArchiveAppliesTo = "System.FileExtension:=.zz OR System.FileExtension:=.ztar OR System.FileExtension:=.zip OR System.FileExtension:=.7z OR System.FileExtension:=.rar OR System.FileExtension:=.tar OR System.FileExtension:=.gz OR System.FileExtension:=.bz2 OR System.FileExtension:=.xz";
+
         private static void PopulateFileSubCommands(RegistryKey shell, string exe)
         {
-            using (var c1 = shell.CreateSubKey("01_AddToArchive"))
+            // --- Extraction commands (scoped to archive extensions via AppliesTo) ---
+            using (var c1 = shell.CreateSubKey("01_ExtractFiles"))
             {
-                c1.SetValue("", "Thêm vào tập tin nén...");
-                c1.SetValue("MUIVerb", "Thêm vào tập tin nén...");
+                c1.SetValue("", "Giải nén tập tin...");
+                c1.SetValue("MUIVerb", "Giải nén tập tin...");
                 c1.SetValue("Icon", $"\"{exe}\",0");
+                c1.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c1.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
+                cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --prompt");
             }
 
-            using (var c2 = shell.CreateSubKey("02_CompressZz"))
+            using (var c2 = shell.CreateSubKey("02_ExtractHere"))
             {
-                c2.SetValue("", "Nén nhanh sang .zz");
-                c2.SetValue("MUIVerb", "Nén nhanh sang .zz");
+                c2.SetValue("", "Giải nén tại đây");
+                c2.SetValue("MUIVerb", "Giải nén tại đây");
                 c2.SetValue("Icon", $"\"{exe}\",0");
+                c2.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c2.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
+                cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --here");
             }
 
-            using (var c3 = shell.CreateSubKey("03_CompressZip"))
+            using (var c3 = shell.CreateSubKey("03_ExtractToFolder"))
             {
-                c3.SetValue("", "Nén nhanh sang .zip");
-                c3.SetValue("MUIVerb", "Nén nhanh sang .zip");
+                c3.SetValue("", "Giải nén vào thư mục riêng...");
+                c3.SetValue("MUIVerb", "Giải nén vào thư mục riêng...");
                 c3.SetValue("Icon", $"\"{exe}\",0");
+                c3.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c3.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --zip");
+                cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --to-folder");
             }
 
-            using (var c4 = shell.CreateSubKey("04_CompressSplit2G"))
+            using (var c4 = shell.CreateSubKey("04_TestArchive"))
             {
-                c4.SetValue("", "Nén & chia nhỏ 2GB (.001, .002)...");
-                c4.SetValue("MUIVerb", "Nén & chia nhỏ 2GB (.001, .002)...");
+                c4.SetValue("", "Kiểm tra tập tin nén");
+                c4.SetValue("MUIVerb", "Kiểm tra tập tin nén");
                 c4.SetValue("Icon", $"\"{exe}\",0");
+                c4.SetValue("AppliesTo", ArchiveAppliesTo);
                 using var cmd = c4.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --split 2GB");
+                cmd.SetValue("", $"\"{exe}\" --gui-test \"%1\"");
             }
 
-            using (var c5 = shell.CreateSubKey("05_OpenStudio"))
+            // --- Compression commands (available for all files) ---
+            using (var c5 = shell.CreateSubKey("05_AddToArchive"))
             {
-                c5.SetValue("", "Mở trong ZeroZip Studio...");
-                c5.SetValue("MUIVerb", "Mở trong ZeroZip Studio...");
+                c5.SetValue("", "Thêm vào tập tin nén...");
+                c5.SetValue("MUIVerb", "Thêm vào tập tin nén...");
                 c5.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c5.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
             }
 
-            using (var c6 = shell.CreateSubKey("06_CrcSha"))
+            using (var c6 = shell.CreateSubKey("06_CompressZz"))
             {
-                c6.SetValue("", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
-                c6.SetValue("MUIVerb", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
+                c6.SetValue("", "Nén nhanh sang .zz");
+                c6.SetValue("MUIVerb", "Nén nhanh sang .zz");
                 c6.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = c6.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\"");
+            }
+
+            using (var c7 = shell.CreateSubKey("07_CompressZip"))
+            {
+                c7.SetValue("", "Nén nhanh sang .zip");
+                c7.SetValue("MUIVerb", "Nén nhanh sang .zip");
+                c7.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c7.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --zip");
+            }
+
+            using (var c8 = shell.CreateSubKey("08_CompressSplit2G"))
+            {
+                c8.SetValue("", "Nén & chia nhỏ 2GB (.001, .002)...");
+                c8.SetValue("MUIVerb", "Nén & chia nhỏ 2GB (.001, .002)...");
+                c8.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c8.CreateSubKey("command");
+                cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --split 2GB");
+            }
+
+            using (var c9 = shell.CreateSubKey("09_CrcSha"))
+            {
+                c9.SetValue("", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
+                c9.SetValue("MUIVerb", "Kiểm tra mã băm & tỉ lệ nén (CRC SHA)...");
+                c9.SetValue("Icon", $"\"{exe}\",0");
+                using var cmd = c9.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" e \"%1\"");
             }
         }
@@ -275,15 +310,6 @@ namespace ZeroZip.Main.Services
                 using var cmd = c4.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" --gui-compress \"%1\" --split 2GB");
             }
-
-            using (var c5 = shell.CreateSubKey("05_OpenStudioDir"))
-            {
-                c5.SetValue("", "Mở trong ZeroZip Studio...");
-                c5.SetValue("MUIVerb", "Mở trong ZeroZip Studio...");
-                c5.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = c5.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --studio \"%1\"");
-            }
         }
 
         private static void PopulateBackgroundSubCommands(RegistryKey shell, string exe)
@@ -319,43 +345,13 @@ namespace ZeroZip.Main.Services
         private static void PopulateArchiveShellVerbs(RegistryKey shell, string exe)
         {
             // Default verb: Open with ZeroZip Explorer (WinRAR style)
+            // Keeping ONLY 'open' at the root level so it doesn't clutter Explorer context menu.
             using (var openKey = shell.CreateSubKey("open"))
             {
                 openKey.SetValue("", "Mở tập tin nén");
+                openKey.SetValue("Icon", $"\"{exe}\",0");
                 using var cmd = openKey.CreateSubKey("command");
                 cmd.SetValue("", $"\"{exe}\" \"%1\"");
-            }
-
-            using (var extFilesKey = shell.CreateSubKey("ExtractFiles"))
-            {
-                extFilesKey.SetValue("", "Giải nén tập tin...");
-                extFilesKey.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = extFilesKey.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\"");
-            }
-
-            using (var extHereKey = shell.CreateSubKey("ExtractHere"))
-            {
-                extHereKey.SetValue("", "Giải nén tại đây");
-                extHereKey.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = extHereKey.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\"");
-            }
-
-            using (var extFolderKey = shell.CreateSubKey("ExtractToFolder"))
-            {
-                extFolderKey.SetValue("", "Giải nén vào thư mục riêng...");
-                extFolderKey.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = extFolderKey.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-extract \"%1\" --to-folder");
-            }
-
-            using (var testKey = shell.CreateSubKey("TestArchive"))
-            {
-                testKey.SetValue("", "Kiểm tra tập tin nén");
-                testKey.SetValue("Icon", $"\"{exe}\",0");
-                using var cmd = testKey.CreateSubKey("command");
-                cmd.SetValue("", $"\"{exe}\" --gui-test \"%1\"");
             }
         }
 
