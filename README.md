@@ -1,4 +1,4 @@
-﻿# 🌌 ZZip — Ultra Compression & Instant SFX Packaging Studio
+# 🌌 ZZip — Ultra Compression & Instant SFX Packaging Studio
 
 <p align="center">
   <a href="https://github.com/kzxl/ZZip"><img src="https://img.shields.io/badge/Type-Desktop%20Application%20%26%20CLI-007ACC?style=flat-square&logo=windows" alt="Type: Desktop App & CLI" /></a>
@@ -61,16 +61,16 @@ When executed with arguments, ZZip runs in headless CLI mode:
 
 ```bash
 # Syntax
-zerozip c <source> [-o output.exe] [-m zstd|lzma|brotli|store]
+zzip c <source> [-o output.exe] [-m zstd|lzma|brotli|store]
                    [--ultra|--normal|--fast] [--level N] [--window N] [--long]
                    [--threads N] [--split SIZE] [-p password] [--zip]
                    [--precomp] [--precomp-path <path>]
-zerozip x <sfx.exe> [-o out_dir] [-p password]
-zerozip i <sfx.exe>
-zerozip l <sfx.exe> [-p password]
-zerozip t <sfx.exe> [-p password]
-zerozip e <source>
-zerozip h
+zzip x <sfx.exe> [-o out_dir] [-p password]
+zzip i <sfx.exe>
+zzip l <sfx.exe> [-p password]
+zzip t <sfx.exe> [-p password]
+zzip e <source>
+zzip h
 ```
 
 ### Command Reference
@@ -89,16 +89,16 @@ zerozip h
 
 ```bash
 # Compress directory with ultra Zstandard preset
-zerozip c "C:\Data" -o Data.exe --ultra
+zzip c "C:\Data" -o Data.exe --ultra
 
 # LZMA maximum compression with 2GB volume splits
-zerozip c game.iso -m lzma --level 22 --long --split 2GB
+zzip c game.iso -m lzma --level 22 --long --split 2GB
 
 # Password-protected archive enveloped in ZIP wrapper
-zerozip c secret\ -o vault.exe -p "SecurePass123" --zip
+zzip c secret\ -o vault.exe -p "SecurePass123" --zip
 
 # Inspect archive contents without unpacking
-zerozip l Data.exe
+zzip l Data.exe
 ```
 
 ---
