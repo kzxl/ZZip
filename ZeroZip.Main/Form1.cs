@@ -46,8 +46,6 @@ namespace ZeroZip.Main
         private ToolStripMenuItem menuOptions = null!;
         private ToolStripMenuItem itemToggleTheme = null!;
         private ToolStripMenuItem menuLanguage = null!;
-        private ToolStripMenuItem itemLangVi = null!;
-        private ToolStripMenuItem itemLangEn = null!;
         private ToolStripMenuItem menuHelp = null!;
         private ToolStripMenuItem itemAbout = null!;
 
@@ -184,11 +182,7 @@ namespace ZeroZip.Main
 
             // Menu: Language (Ngôn ngữ)
             menuLanguage = new ToolStripMenuItem(LocalizationService.Get("Menu_Language"));
-            itemLangVi = new ToolStripMenuItem(LocalizationService.Get("Menu_Lang_Vi"), null, (s, e) => LocalizationService.SetLanguage(AppLanguage.Vietnamese));
-            itemLangEn = new ToolStripMenuItem(LocalizationService.Get("Menu_Lang_En"), null, (s, e) => LocalizationService.SetLanguage(AppLanguage.English));
-            itemLangVi.Checked = LocalizationService.CurrentLanguage == AppLanguage.Vietnamese;
-            itemLangEn.Checked = LocalizationService.CurrentLanguage == AppLanguage.English;
-            menuLanguage.DropDownItems.AddRange(new ToolStripItem[] { itemLangVi, itemLangEn });
+            PopulateLanguageMenu();
 
             // Menu: Help (Trợ giúp)
             menuHelp = new ToolStripMenuItem(LocalizationService.Get("Menu_Help"));
@@ -269,6 +263,24 @@ namespace ZeroZip.Main
             };
             tbBtnTest.Click += TbBtnTest_Click;
             pnlWinRarToolbar.Controls.Add(tbBtnTest);
+        }
+
+        private void PopulateLanguageMenu()
+        {
+            menuLanguage.DropDownItems.Clear();
+            string curCode = LocalizationService.CurrentLanguageCode;
+            foreach (var lang in LocalizationService.GetAvailableLanguages())
+            {
+                var item = new ToolStripMenuItem(lang.DisplayName, null, (s, e) =>
+                {
+                    LocalizationService.SetLanguage(lang.Code);
+                })
+                {
+                    Checked = string.Equals(lang.Code, curCode, StringComparison.OrdinalIgnoreCase),
+                    Tag = lang.Code
+                };
+                menuLanguage.DropDownItems.Add(item);
+            }
         }
 
         #region WinRAR Archive Explorer Main View
@@ -744,9 +756,18 @@ namespace ZeroZip.Main
             if (menuOptions != null) menuOptions.Text = LocalizationService.Get("Menu_Options");
             if (itemToggleTheme != null) itemToggleTheme.Text = LocalizationService.Get("Menu_ToggleTheme");
 
-            if (menuLanguage != null) menuLanguage.Text = LocalizationService.Get("Menu_Language");
-            if (itemLangVi != null) itemLangVi.Checked = LocalizationService.CurrentLanguage == AppLanguage.Vietnamese;
-            if (itemLangEn != null) itemLangEn.Checked = LocalizationService.CurrentLanguage == AppLanguage.English;
+            if (menuLanguage != null)
+            {
+                menuLanguage.Text = LocalizationService.Get("Menu_Language");
+                string curCode = LocalizationService.CurrentLanguageCode;
+                foreach (ToolStripItem it in menuLanguage.DropDownItems)
+                {
+                    if (it is ToolStripMenuItem mnu && mnu.Tag is string code)
+                    {
+                        mnu.Checked = string.Equals(code, curCode, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+            }
 
             if (menuHelp != null) menuHelp.Text = LocalizationService.Get("Menu_Help");
             if (itemAbout != null) itemAbout.Text = LocalizationService.Get("Menu_About");

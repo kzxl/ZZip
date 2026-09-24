@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroZip.Core\ZeroZip.Core.csproj" />
+    <ProjectReference Include="..\ZeroZip.Localization\ZeroZip.Localization.csproj" />
     <!-- Build dependency only: we publish the stub ourselves, don't reference its assembly. -->
     <ProjectReference Include="..\ZeroZip.Stub\ZeroZip.Stub.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -28,6 +29,12 @@
   <ItemGroup>
     <PackageReference Include="ZeroUI.Core" Version="1.8.0" />
     <PackageReference Include="ZeroUI.WinForms" Version="1.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="languages\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!--
