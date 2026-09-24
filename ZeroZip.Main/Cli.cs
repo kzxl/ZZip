@@ -270,6 +270,29 @@ internal static class Cli
         Console.WriteLine($"ZeroZip: giải nén \"{source}\" -> \"{dest}\"  [{footer.Method}]"
             + (footer.IsEncrypted ? " (mã hóa)" : ""));
 
+        long expectedSize = footer.OriginalSize;
+        if (expectedSize > 0)
+        {
+            var check = DiskSpaceSafety.CheckDiskSpace(dest, expectedSize);
+            if (check.CheckSucceeded && !check.HasEnoughSpace)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"[CẢNH BÁO DUNG LƯỢNG] Ổ đĩa đích \"{check.DriveName}\" không đủ dung lượng để giải nén!");
+                Console.WriteLine($"  • Dung lượng giải nén dự kiến: {DiskSpaceSafety.FormatSize(check.RequiredBytes)}");
+                Console.WriteLine($"  • Dung lượng trống còn lại:     {DiskSpaceSafety.FormatSize(check.AvailableFreeBytes)}");
+                Console.WriteLine($"  • Dung lượng còn thiếu:         {DiskSpaceSafety.FormatSize(check.DeficitBytes)}");
+                Console.ResetColor();
+
+                Console.Write("Bạn có muốn tiếp tục giải nén không? (y/N): ");
+                string? answer = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(answer) || !answer.Trim().Equals("y", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("Đã hủy thao tác giải nén.");
+                    return 1;
+                }
+            }
+        }
+
         using (var verify = SfxComposer.OpenPayload(source, footer))
         {
             if (!ZtarEngine.VerifyCrc(verify, footer.Crc32))

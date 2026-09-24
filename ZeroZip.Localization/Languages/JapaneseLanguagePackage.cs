@@ -101,6 +101,8 @@ public sealed class JapaneseLanguagePackage : BaseLanguagePackage
 
         // Dialogs & Messages
         ["Dialog_AddArchive_Title"] = "アーカイブへの追加 (ZeroZip)",
+        ["Msg_LowDiskSpaceTitle"] = "ディスク空き容量の警告",
+        ["Msg_LowDiskSpaceWarning"] = "展開先ドライブの空き容量が不足しています！\n\n• 展開に必要な容量: {0}\n• 利用可能な空き容量 ({1}): {2}\n• 不足容量: {3}\n\nこのまま展開を続行しますか？",
         ["Studio_LblSource"] = "圧縮元のファイルまたはフォルダー:",
         ["Studio_LblDestSave"] = "出力先アーカイブ (.zz, .zip, .exe):",
         ["Studio_Card1_Title"] = "1. ソースデータと出力先",

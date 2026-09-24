@@ -128,6 +128,8 @@ public sealed class VietnameseLanguagePackage : BaseLanguagePackage
         ["Msg_ConfirmUnregisterShell"] = "ZeroZip hiện đã có trong menu chuột phải của Windows. Bạn có muốn gỡ bỏ tích hợp không?",
         ["Msg_ShellRemoved"] = "Đã gỡ bỏ ZeroZip khỏi menu chuột phải Windows Explorer.",
         ["Msg_ShellAdded"] = "Đã đăng ký thành công ZeroZip vào menu chuột phải Windows Explorer!",
+        ["Msg_LowDiskSpaceTitle"] = "Cảnh Báo Dung Lượng Ổ Đĩa",
+        ["Msg_LowDiskSpaceWarning"] = "Ổ đĩa đích không đủ dung lượng trống để giải nén gói tin!\n\n• Dung lượng cần giải nén: {0}\n• Dung lượng trống còn lại ({1}): {2}\n• Còn thiếu: {3}\n\nBạn có muốn tiếp tục giải nén không?",
         ["Msg_SelectExtractDest"] = "Chọn thư mục đích để giải nén toàn bộ:",
         ["Msg_ArchiveInfo"] = "Thông Tin Gói Nén ZeroZip",
         ["Msg_AboutTitle"] = "Về ZeroZip Sovereign Archiver",

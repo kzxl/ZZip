@@ -199,6 +199,16 @@ namespace ZeroZip.Main.Services
             if (_currentArchivePath == null || _currentFooter == null)
                 throw new InvalidOperationException("Chưa mở gói nén nào.");
 
+            var entry = _allEntries.FirstOrDefault(e => e.Name.Equals(relativePath, StringComparison.OrdinalIgnoreCase));
+            if (entry.Size > 0)
+            {
+                var check = DiskSpaceSafety.CheckDiskSpace(Path.GetTempPath(), entry.Size);
+                if (check.CheckSucceeded && !check.HasEnoughSpace)
+                {
+                    throw new IOException($"Không đủ dung lượng ổ đĩa tạm để mở tệp (Cần: {DiskSpaceSafety.FormatSize(entry.Size)}, Còn trống: {DiskSpaceSafety.FormatSize(check.AvailableFreeBytes)}).");
+                }
+            }
+
             string tempDir = Path.Combine(Path.GetTempPath(), "ZeroZip_View_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDir);
 

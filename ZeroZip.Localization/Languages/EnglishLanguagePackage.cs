@@ -128,6 +128,8 @@ public sealed class EnglishLanguagePackage : BaseLanguagePackage
         ["Msg_ConfirmUnregisterShell"] = "ZeroZip is currently integrated into Windows Explorer context menu. Do you want to remove it?",
         ["Msg_ShellRemoved"] = "Successfully removed ZeroZip from Windows Explorer context menu.",
         ["Msg_ShellAdded"] = "Successfully registered ZeroZip into Windows Explorer context menu!",
+        ["Msg_LowDiskSpaceTitle"] = "Disk Space Warning",
+        ["Msg_LowDiskSpaceWarning"] = "The destination drive does not have enough free space to extract the archive!\n\n• Required uncompressed size: {0}\n• Available free space ({1}): {2}\n• Deficit: {3}\n\nDo you want to proceed anyway?",
         ["Msg_SelectExtractDest"] = "Select destination folder to extract all files:",
         ["Msg_ArchiveInfo"] = "ZeroZip Archive Information",
         ["Msg_AboutTitle"] = "About ZeroZip Sovereign Archiver",

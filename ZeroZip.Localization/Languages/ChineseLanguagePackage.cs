@@ -101,6 +101,8 @@ public sealed class ChineseLanguagePackage : BaseLanguagePackage
 
         // Dialogs & Messages
         ["Dialog_AddArchive_Title"] = "添加到压缩文件 (ZeroZip)",
+        ["Msg_LowDiskSpaceTitle"] = "磁盘空间不足警告",
+        ["Msg_LowDiskSpaceWarning"] = "目标驱动器没有足够的剩余空间来解压文件！\n\n• 解压所需大小: {0}\n• 剩余可用空间 ({1}): {2}\n• 空间不足: {3}\n\n您确定要继续解压吗？",
         ["Studio_LblSource"] = "源文件或文件夹:",
         ["Studio_LblDestSave"] = "目标压缩包 (.zz, .zip, .exe):",
         ["Studio_Card1_Title"] = "1. 源数据与目标文件",

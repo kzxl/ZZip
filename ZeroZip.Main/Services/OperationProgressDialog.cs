@@ -12,6 +12,7 @@ using ZeroUI.WinForms.Base;
 using ZeroUI.WinForms.Editors;
 using ZeroUI.WinForms.Theme;
 using ZeroZip.Core;
+using ZeroZip.Localization;
 
 namespace ZeroZip.Main.Services
 {
@@ -173,6 +174,47 @@ namespace ZeroZip.Main.Services
 
         protected override async Task RunAfterShown()
         {
+            // Safety Check: Verify sufficient free disk space on destination volume before extraction
+            if (_opType == OperationType.Extract)
+            {
+                string destDir = _destPath ?? Path.Combine(Path.GetDirectoryName(_sourcePath) ?? ".",
+                    Path.GetFileNameWithoutExtension(_sourcePath) + "_Extracted");
+
+                long expectedSize = _totalExpectedBytes;
+                if (expectedSize <= 0)
+                {
+                    expectedSize = DiskSpaceSafety.EstimateArchiveUncompressedSize(_sourcePath);
+                    _totalExpectedBytes = expectedSize;
+                }
+
+                if (expectedSize > 0)
+                {
+                    var check = DiskSpaceSafety.CheckDiskSpace(destDir, expectedSize);
+                    if (check.CheckSucceeded && !check.HasEnoughSpace)
+                    {
+                        string reqStr = DiskSpaceSafety.FormatSize(check.RequiredBytes);
+                        string freeStr = DiskSpaceSafety.FormatSize(check.AvailableFreeBytes);
+                        string defStr = DiskSpaceSafety.FormatSize(check.DeficitBytes);
+                        string title = LocalizationService.Get("Msg_LowDiskSpaceTitle");
+                        string msgPattern = LocalizationService.Get("Msg_LowDiskSpaceWarning");
+                        string msg = string.Format(msgPattern, reqStr, check.DriveName, freeStr, defStr);
+
+                        var confirm = MessageBox.Show(this, msg, title, MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+                        if (confirm != DialogResult.Yes)
+                        {
+                            lblStats.Text = "Đã hủy do không đủ dung lượng ổ đĩa.";
+                            lblStats.ForeColor = ZeroTheme.Colors.Warning;
+                            await Task.Delay(300);
+                            this.DialogResult = DialogResult.Cancel;
+                            this.Close();
+                            return;
+                        }
+                    }
+                }
+            }
+
             _stopwatch.Start();
             _lastTime = DateTime.UtcNow;
             _timer.Start();

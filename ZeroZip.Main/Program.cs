@@ -120,14 +120,11 @@ static class Program
                 destDir = fbd.SelectedPath;
             }
 
-            long totalBytes = 0;
-            try
+            long totalBytes = DiskSpaceSafety.EstimateArchiveUncompressedSize(source);
+            if (totalBytes <= 0 && File.Exists(source))
             {
-                var f = SfxComposer.ReadFooter(source);
-                if (f != null) totalBytes = f.OriginalSize;
-                else if (File.Exists(source)) totalBytes = new FileInfo(source).Length;
+                try { totalBytes = new FileInfo(source).Length; } catch { }
             }
-            catch { }
 
             var dialog = new OperationProgressDialog(OperationType.Extract, source, destDir, null, null, totalBytes);
             Application.Run(dialog);

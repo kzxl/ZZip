@@ -883,7 +883,10 @@ namespace ZeroZip.Main
                 }
             }
 
-            var dialog = new OperationProgressDialog(OperationType.Extract, _archiveExplorer.CurrentArchivePath!, dest);
+            long expectedSize = set.Count > 0
+                ? _archiveExplorer.AllEntries.Where(e => !e.IsDirectory && set.Contains(e.Name)).Sum(e => e.Size)
+                : (_archiveExplorer.CurrentFooter?.OriginalSize ?? 0);
+            var dialog = new OperationProgressDialog(OperationType.Extract, _archiveExplorer.CurrentArchivePath!, dest, null, null, expectedSize);
             dialog.ShowDialog(this);
             if (dialog.IsCompleted)
             {
@@ -926,7 +929,8 @@ namespace ZeroZip.Main
             using var fbd = new FolderBrowserDialog { Description = "Chọn thư mục giải nén toàn bộ kho lưu trữ" };
             if (fbd.ShowDialog() != DialogResult.OK) return;
 
-            var dialog = new OperationProgressDialog(OperationType.Extract, _archiveExplorer.CurrentArchivePath, fbd.SelectedPath);
+            long expectedSize = _archiveExplorer.CurrentFooter?.OriginalSize ?? _archiveExplorer.AllEntries.Where(e => !e.IsDirectory).Sum(e => e.Size);
+            var dialog = new OperationProgressDialog(OperationType.Extract, _archiveExplorer.CurrentArchivePath, fbd.SelectedPath, null, null, expectedSize);
             dialog.ShowDialog(this);
             if (dialog.IsCompleted)
             {
